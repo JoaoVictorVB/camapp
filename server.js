@@ -1,7 +1,7 @@
 'use strict';
 /*
- * CamApp — servidor local da camera IP
- * Node >= 18, zero dependencias. Usa ffmpeg para falar RTSP.
+ * CamApp v2 — servidor local da camera IP
+ * Node >= 18, zero dependencias. Usas ffmpeg para RTSP e proxies PSIA/YG pra PTZ + configuracao.
  */
 const http = require('http');
 const fs = require('fs');
@@ -13,15 +13,40 @@ const { URL } = require('url');
 const ROOT = __dirname;
 const PUBLIC = path.join(ROOT, 'public');
 const REC_DIR = path.join(ROOT, 'recordings');
-const CFG = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
+const PHOTO_DIR = path.join(ROOT, 'photos');
+const CFG_FILE = path.join(ROOT, 'config.json');
 
+function loadConfig() {
+  const defaults = {
+    port: 8080,
+    rtsp: 'rtsp://admin:admin123456@10.0.0.110:8554/profile0',
+    ffmpeg: 'bin/ffmpeg.exe',
+    cameraName: 'Câmera',
+    httpBase: 'http://10.0.0.110',
+    presets: {
+      ultra:  { label: 'Ultra',    fps: 15, width: 0,    quality: 3 },
+      alta:   { label: 'Alta',    fps: 10, width: 1280, quality: 5 },
+      media:  { label: 'Média',   fps: 8,  width: 960,  quality: 6 },
+      economia:{ label: 'Economia', fps: 5, width: 640,  quality: 7 }
+    },
+    ptzChannel: 0
+  };
+  try {
+    const raw = JSON.parse(fs.readFileSync(CFG_FILE, 'utf8'));
+    return Object.assign({}, defaults, raw);
+  } catch (_) {
+    return defaults;
+  }
+}
+
+const CFG = loadConfig();
 const PORT = CFG.port || 8080;
 const RTSP = CFG.rtsp;
 const FFMPEG = path.isAbsolute(CFG.ffmpeg) ? CFG.ffmpeg : path.join(ROOT, CFG.ffmpeg);
-const FPS = CFG.streamFps || 12;
-const CAMERA_NAME = CFG.cameraName || 'Camera';
+const HTTP_BASE = (CFG.httpBase || 'http://10.0.0.110').replace(/\/$/, '');
 
 fs.mkdirSync(REC_DIR, { recursive: true });
+fs.mkdirSync(PHOTO_DIR, { recursive: true });
 
 /* ---------------------------------------------------------------- utils */
 
@@ -47,32 +72,141 @@ function sendJson(res, code, obj) {
   send(res, code, JSON.stringify(obj), { 'Content-Type': 'application/json; charset=utf-8' });
 }
 
-function hostPortOf(rtspUrl) {
-  const u = new URL(rtspUrl);
-  return { host: u.hostname, port: Number(u.port) || 554 };
-}
-
-function cameraOnline() {
-  const { host, port } = hostPortOf(RTSP);
-  return new Promise((resolve) => {
-    const s = net.connect({ host, port });
-    const done = (ok) => { try { s.destroy(); } catch (_) {} resolve(ok); };
-    s.setTimeout(1500);
-    s.once('connect', () => done(true));
-    s.once('timeout', () => done(false));
-    s.once('error', () => done(false));
-  });
-}
-
 function stamp() {
   const d = new Date();
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
+/* ------------------------------------------------- PSIA (camera HTTP API) */
+
+async function psiaRequest(method, urlPath, { timeout = 4000 } = {}) {
+  const url = HTTP_BASE + urlPath;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const res = await fetch(url, { method, signal: ctrl.signal });
+    const text = await res.text();
+    return { ok: res.ok, status: res.status, body: text };
+  } catch (e) {
+    return { ok: false, status: 0, body: '', error: e.message };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function psiaRetry(method, urlPath, opts = {}) {
+  let last = null;
+  for (let i = 0; i < 3; i++) {
+    const r = await psiaRequest(method, urlPath, opts);
+    if (r.ok || (r.status && r.status !== 0)) return r;
+    last = r;
+    await new Promise((s) => setTimeout(s, 400 * (i + 1)));
+  }
+  return last;
+}
+
+function xmlText(xml, tag) {
+  const m = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, 'i').exec(xml);
+  return m ? m[1].trim() : '';
+}
+
+/* ------------------------------------------------------------- streaming */
+
+function streamingArgs(presetName) {
+  const presets = CFG.presets || {};
+  const p = presets[presetName] || presets.alta || { fps: 10, width: 0, quality: 5 };
+  const vf = [`fps=${p.fps}`];
+  if (p.width) vf.push(`scale=${p.width}:-2:flags=bilinear`);
+  return [
+    '-hide_banner', '-loglevel', 'error',
+    '-rtsp_transport', 'tcp',
+    '-use_wallclock_as_timestamps', '1',
+    '-i', RTSP,
+    '-an',
+    '-vf', vf.join(','),
+    '-f', 'mpjpeg',
+    '-q:v', String(p.quality),
+    '-'
+  ];
+}
+
+/* quantas sessoes ffmpeg de stream estao abertas, pra painel */
+let streamSessions = 0;
+
+function pipeMjpeg(req, res, url) {
+  const presetName = url.searchParams.get('q') || 'alta';
+  const proc = spawn(FFMPEG, streamingArgs(presetName), { windowsHide: true });
+  streamSessions++;
+
+  res.writeHead(200, {
+    'Content-Type': 'multipart/x-mixed-replace; boundary=ffmpeg',
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    'Pragma': 'no-cache',
+    'Connection': 'close',
+    'X-Accel-Buffering': 'no'
+  });
+
+  let closed = false;
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    streamSessions = Math.max(0, streamSessions - 1);
+    try { proc.kill('SIGKILL'); } catch (_) {}
+  };
+
+  proc.stdout.pipe(res);
+  proc.stderr.on('data', (d) => {
+    const s = d.toString().trim();
+    if (s) console.error('[stream]', s);
+  });
+  proc.on('error', (e) => {
+    console.error('[stream] ffmpeg:', e.message);
+    cleanup();
+    try { res.end(); } catch (_) {}
+  });
+  proc.on('exit', () => { cleanup(); try { res.end(); } catch (_) {} });
+
+  req.on('close', cleanup);
+  res.on('close', cleanup);
+}
+
+function grabFrame(res, opts = {}) {
+  const { download = false, save = false } = opts;
+  const args = [
+    '-hide_banner', '-loglevel', 'error',
+    '-rtsp_transport', 'tcp',
+    '-use_wallclock_as_timestamps', '1',
+    '-i', RTSP,
+    '-frames:v', '1',
+    '-q:v', '2',
+    '-f', 'image2',
+    '-vcodec', 'mjpeg',
+    '-'
+  ];
+  const proc = spawn(FFMPEG, args, { windowsHide: true });
+  const chunks = [];
+  proc.stdout.on('data', (c) => chunks.push(c));
+  proc.on('error', (e) => sendJson(res, 500, { ok: false, error: e.message }));
+  proc.on('exit', (code) => {
+    const buf = Buffer.concat(chunks);
+    if (!buf.length) return sendJson(res, 502, { ok: false, error: 'sem imagem (tenta de novo)' });
+    const headers = { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' };
+    if (save) {
+      const name = `foto-${stamp()}.jpg`;
+      fs.writeFileSync(path.join(PHOTO_DIR, name), buf);
+      if (download) headers['Content-Disposition'] = `attachment; filename="${name}"`;
+      sendJson(res, 200, { ok: true, file: name, url: `/photos/${name}` });
+      return;
+    }
+    if (download) headers['Content-Disposition'] = `attachment; filename="foto-${stamp()}.jpg"`;
+    send(res, 200, buf, headers);
+  });
+}
+
 /* ------------------------------------------------------------- gravacao */
 
-let rec = null; // { proc, file, started, finalizing }
+let rec = null; // { proc, file, started, stopping }
 
 /* .ts sobrevive a encerramento abrupto (Windows nao entrega SIGINT ao filho).
    Ao parar, remuxa o ts pra mp4 (rapido, stream copy). */
@@ -147,76 +281,67 @@ function recoverOrphans() {
   tsFiles.forEach((f) => finalizeTs(path.join(REC_DIR, f)));
 }
 
-/* ------------------------------------------------------------- streaming */
+/* ------------------------------------------------------------ PTZ (YG/PSIA) */
 
-function pipeMjpeg(req, res) {
-  const args = [
-    '-hide_banner', '-loglevel', 'error',
-    '-rtsp_transport', 'tcp',
-    '-i', RTSP,
-    '-an',
-    '-vf', `fps=${FPS}`,
-    '-f', 'mpjpeg',
-    '-q:v', '6',
-    '-'
-  ];
-  const proc = spawn(FFMPEG, args, { windowsHide: true });
+const PTZ = (CFG.ptzChannel == null ? 0 : CFG.ptzChannel);
 
-  res.writeHead(200, {
-    'Content-Type': 'multipart/x-mixed-replace; boundary=ffmpeg',
-    'Cache-Control': 'no-store, no-cache, must-revalidate',
-    'Pragma': 'no-cache',
-    'Connection': 'close'
-  });
-
-  let closed = false;
-  const cleanup = () => {
-    if (closed) return;
-    closed = true;
-    try { proc.kill('SIGKILL'); } catch (_) {}
-  };
-
-  proc.stdout.pipe(res);
-  proc.stderr.on('data', (d) => {
-    const s = d.toString().trim();
-    if (s) console.error('[stream]', s);
-  });
-  proc.on('error', (e) => {
-    console.error('[stream] ffmpeg:', e.message);
-    cleanup();
-    try { res.end(); } catch (_) {}
-  });
-  proc.on('exit', () => { cleanup(); try { res.end(); } catch (_) {} });
-
-  req.on('close', cleanup);
-  res.on('close', cleanup);
+/* implementacao direta pra cada acao PTZ */
+async function ptzProxy(action, body = {}) {
+  const base = `/PSIA/YG/PTZCtrl/channels/${PTZ}/continuous`;
+  switch (action) {
+    case 'move':      return psiaRetry('PUT', `${base}?pan=${body.pan || 0}&tilt=${body.tilt || 0}`);
+    case 'stop':      return psiaRetry('PUT', `${base}?pan=0&tilt=0`);
+    case 'zoomIn':    return psiaRetry('PUT', `${base}/zoom?data=1`);
+    case 'zoomOut':   return psiaRetry('PUT', `${base}/zoom?data=-1`);
+    case 'zoomStop':  return psiaRetry('PUT', `${base}/zoom?data=0`);
+    case 'focusIn':   return psiaRetry('PUT', `${base}/focus?data=1`);
+    case 'focusOut':  return psiaRetry('PUT', `${base}/focus?data=-1`);
+    case 'focusStop': return psiaRetry('PUT', `${base}/focus?data=0`);
+    case 'autoFocus': return psiaRetry('PUT', `${base}/focus?data=3`);
+    case 'irisIn':    return psiaRetry('PUT', `${base}/iris?data=1`);
+    case 'irisOut':   return psiaRetry('PUT', `${base}/iris?data=-1`);
+    case 'irisStop':  return psiaRetry('PUT', `${base}/iris?data=0`);
+    case 'autoPan':   return psiaRetry('PUT', `${base}/autoPan?data=${body.on ? 1 : 0}`);
+    case 'speed':     return psiaRetry('PUT', `/PSIA/YG/PTZCtrl/speed?data=${body.n || 1}`);
+    case 'caps':      return psiaRetry('GET', `/PSIA/YG/PTZCtrl/channels/${PTZ}/capabilities`);
+    case 'gotoPreset':   return psiaRetry('PUT', `/PSIA/YG/PTZCtrl/channels/${PTZ}/presets/${body.id}/goto`);
+    case 'delPreset':    return psiaRetry('DELETE', `/PSIA/YG/PTZCtrl/channels/${PTZ}/presets/${body.id}`);
+    case 'setPreset':    return psiaRetry('PUT', `/PSIA/YG/PTZCtrl/channels/${PTZ}/presets/${body.id}`);
+    default: return { ok: false, status: 400, body: 'acao ptz desconhecida' };
+  }
 }
 
-function snapshot(res, download) {
-  const args = [
-    '-hide_banner', '-loglevel', 'error',
-    '-rtsp_transport', 'tcp',
-    '-i', RTSP,
-    '-frames:v', '1',
-    '-q:v', '2',
-    '-f', 'image2',
-    '-vcodec', 'mjpeg',
-    '-'
-  ];
-  const proc = spawn(FFMPEG, args, { windowsHide: true });
-  const chunks = [];
-  proc.stdout.on('data', (c) => chunks.push(c));
-  proc.on('error', (e) => sendJson(res, 500, { ok: false, error: e.message }));
-  proc.on('exit', (code) => {
-    const buf = Buffer.concat(chunks);
-    if (!buf.length) return sendJson(res, 502, { ok: false, error: 'sem imagem' });
-    const headers = { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' };
-    if (download) headers['Content-Disposition'] = `attachment; filename="foto-${stamp()}.jpg"`;
-    send(res, 200, buf, headers);
+/* --------------------------------------------------------- rotas/helpers */
+
+async function getBitrate() {
+  const r = await psiaRequest('GET', '/PSIA/YG/curBitrate/0', { timeout: 1500 });
+  if (!r.ok) return null;
+  return xmlText(r.body, 'CurBitrate') || null;
+}
+
+function cameraOnline() {
+  const u = new URL(RTSP);
+  return new Promise((resolve) => {
+    const s = net.connect({ host: u.hostname, port: Number(u.port) || 554 });
+    const done = (ok) => { try { s.destroy(); } catch (_) {} resolve(ok); };
+    s.setTimeout(1500);
+    s.once('connect', () => done(true));
+    s.once('timeout', () => done(false));
+    s.once('error', () => done(false));
   });
 }
 
-/* ---------------------------------------------------------------- rotas */
+function telnetOpen() {
+  const u = new URL(RTSP);
+  return new Promise((resolve) => {
+    const s = net.connect({ host: u.hostname, port: 23 });
+    const done = (ok) => { try { s.destroy(); } catch (_) {} resolve(ok); };
+    s.setTimeout(1500);
+    s.once('connect', () => done(true));
+    s.once('timeout', () => done(false));
+    s.once('error', () => done(false));
+  });
+}
 
 function listRecordings() {
   return fs.readdirSync(REC_DIR)
@@ -226,6 +351,30 @@ function listRecordings() {
       return { file: f, size: st.size, mtime: st.mtimeMs };
     })
     .sort((a, b) => b.mtime - a.mtime);
+}
+
+function listPhotos() {
+  return fs.readdirSync(PHOTO_DIR)
+    .filter((f) => /\.jpe?g$/i.test(f))
+    .map((f) => {
+      const st = fs.statSync(path.join(PHOTO_DIR, f));
+      return { file: f, size: st.size, mtime: st.mtimeMs };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+}
+
+function serveFile(req, res, absDir, relName, mimeOverride) {
+  const name = path.basename(decodeURIComponent(relName));
+  const file = path.join(absDir, name);
+  if (!fs.existsSync(file)) return send(res, 404, 'not found');
+  const st = fs.statSync(file);
+  const ext = path.extname(file).toLowerCase();
+  res.writeHead(200, {
+    'Content-Type': mimeOverride || MIME[ext] || 'application/octet-stream',
+    'Content-Length': st.size,
+    'Cache-Control': 'no-store'
+  });
+  fs.createReadStream(file).pipe(res);
 }
 
 function serveStatic(req, res, pathname) {
@@ -240,40 +389,137 @@ function serveStatic(req, res, pathname) {
   });
 }
 
+function readBody(req) {
+  return new Promise((resolve) => {
+    const data = [];
+    req.on('data', (c) => data.push(c));
+    req.on('end', () => {
+      const raw = Buffer.concat(data).toString('utf8');
+      if (!raw) return resolve({});
+      try { resolve(JSON.parse(raw)); } catch (_) { resolve({}); }
+    });
+  });
+}
+
+function parseDeviceJson() {
+  return psiaRetry('GET', '/PSIA/System/deviceInfo', { timeout: 4000 }).then((r) => {
+    if (!r.ok) return null;
+    return {
+      deviceName: xmlText(r.body, 'deviceName'),
+      deviceID: xmlText(r.body, 'deviceID'),
+      model: xmlText(r.body, 'model'),
+      serialNumber: xmlText(r.body, 'serialNumber'),
+      macAddress: xmlText(r.body, 'macAddress'),
+      firmwareVersion: xmlText(r.body, 'firmwareVersion'),
+      bootVersion: xmlText(r.body, 'bootVersion'),
+      hardwareVersion: xmlText(r.body, 'hardwareVersion')
+    };
+  });
+}
+
+/* ---------------------------------------------------------------- rotas */
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const p = url.pathname;
+  const method = req.method;
 
   try {
-    if (p === '/stream.mjpg') return pipeMjpeg(req, res);
+    /* vivo */
+    if (p === '/stream.mjpg') return pipeMjpeg(req, res, url);
+    if (p === '/snap.jpg')    return grabFrame(res, { download: url.searchParams.get('download') === '1' });
 
-    if (p === '/snap.jpg') return snapshot(res, url.searchParams.get('download') === '1');
+    /* fotos salvas no servidor */
+    if (p === '/api/photo' && method === 'POST') return grabFrame(res, { save: true });
+    if (p === '/api/photos')    return sendJson(res, 200, listPhotos());
+    if (p.startsWith('/photos/'))    return serveFile(req, res, PHOTO_DIR, p.slice('/photos/'.length));
+    if (p.startsWith('/api/photo/') && method === 'DELETE') {
+      const name = path.basename(p.slice('/api/photo/'.length));
+      fs.unlink(path.join(PHOTO_DIR, name), () => sendJson(res, 200, { ok: true }));
+      return;
+    }
 
+    /* gravacao */
+    if (p === '/api/record/start' && method === 'POST') return sendJson(res, 200, startRecording());
+    if (p === '/api/record/stop'  && method === 'POST') return sendJson(res, 200, stopRecording());
+    if (p === '/api/recordings')   return sendJson(res, 200, listRecordings());
+    if (p.startsWith('/api/recording/') && method === 'DELETE') {
+      const name = path.basename(p.slice('/api/recording/'.length));
+      fs.unlink(path.join(REC_DIR, name), () => sendJson(res, 200, { ok: true }));
+      return;
+    }
+    if (p.startsWith('/recordings/')) return serveFile(req, res, REC_DIR, p.slice('/recordings/'.length), 'video/mp4');
+
+    /* status / dispositivo */
     if (p === '/api/status') {
-      const online = await cameraOnline();
+      const [online, bitrate] = await Promise.all([cameraOnline(), getBitrate()]);
       return sendJson(res, 200, {
         online,
-        camera: CAMERA_NAME,
-        recording: rec ? { file: path.basename(rec.file), since: rec.started } : null,
-        uptime: process.uptime()
+        camera: CFG.cameraName,
+        recording: rec ? { file: path.basename(rec.file).replace(/\.ts$/i, '.mp4'), since: rec.started } : null,
+        bitrate,
+        streams: streamSessions,
+        uptime: Math.floor(process.uptime()),
+        presets: CFG.presets ? Object.fromEntries(Object.entries(CFG.presets).map(([k, v]) => [k, v])) : undefined
       });
     }
 
-    if (p === '/api/record/start' && req.method === 'POST') return sendJson(res, 200, startRecording());
-    if (p === '/api/record/stop' && req.method === 'POST') return sendJson(res, 200, stopRecording());
-    if (p === '/api/recordings') return sendJson(res, 200, listRecordings());
-
-    if (p.startsWith('/recordings/')) {
-      const name = path.basename(decodeURIComponent(p.slice('/recordings/'.length)));
-      const file = path.join(REC_DIR, name);
-      if (!fs.existsSync(file)) return send(res, 404, 'not found');
-      const st = fs.statSync(file);
-      res.writeHead(200, {
-        'Content-Type': 'video/mp4',
-        'Content-Length': st.size,
-        'Cache-Control': 'no-store'
+    if (p === '/api/device') {
+      const [dev, portsR, faceR, tel] = await Promise.all([
+        parseDeviceJson(),
+        psiaRequest('GET', '/PSIA/YG/netWork/getAllPort', { timeout: 3000 }).catch(() => null),
+        psiaRequest('GET', '/PSIA/YG/event/faceDetection', { timeout: 3000 }).catch(() => null),
+        telnetOpen().catch(() => false)
+      ]);
+      const ports = [];
+      if (portsR && portsR.ok) {
+        const re = /<AccessProtocol[\s\S]*?<\/AccessProtocol>/g;
+        let m;
+        while ((m = re.exec(portsR.body))) {
+          const blob = m[0];
+          ports.push({ proto: xmlText(blob, 'protocol'), port: xmlText(blob, 'portNo') });
+        }
+      }
+      const face = faceR && faceR.ok
+        ? { enabled: xmlText(faceR.body, 'enabled'), main: xmlText(faceR.body, 'mainFaceDetect'), sub: xmlText(faceR.body, 'subFaceDetect') }
+        : null;
+      return sendJson(res, 200, {
+        ok: !!(dev || portsR?.ok),
+        device: dev,
+        ports,
+        faceDetection: face,
+        telnetOpen: tel,
+        httpBase: HTTP_BASE,
+        adminUiUrl: HTTP_BASE + '/doc/page/login.html'
       });
-      return fs.createReadStream(file).pipe(res);
+    }
+
+    /* PTZ */
+    if (p === '/api/ptz/presets' && method === 'GET') {
+      const r = await psiaRetry('GET', `/PSIA/YG/PTZCtrl/channels/${PTZ}/presets`);
+      if (!r.ok) return sendJson(res, 502, { ok: false });
+      const rx = /<PTZPreset[\s\S]*?<\/PTZPreset>/g;
+      const items = [];
+      let m;
+      while ((m = rx.exec(r.body))) {
+        const blob = m[0];
+        items.push({
+          id: xmlText(blob, 'presetID') || xmlText(blob, 'id'),
+          name: xmlText(blob, 'presetName') || xmlText(blob, 'name')
+        });
+      }
+      return sendJson(res, 200, { ok: true, presets: items, maxPresetNum: 16 });
+    }
+    if (p.startsWith('/api/ptz') && method === 'POST') {
+      const action = p.slice('/api/ptz'.length).replace(/^\//, '').split('/')[0];
+      const body = await readBody(req);
+      const r = await ptzProxy(action, body);
+      return sendJson(res, r.ok ? 200 : 502, { ok: r.ok, status: r.status });
+    }
+
+    if (p === '/api/reboot' && method === 'POST') {
+      const r = await psiaRetry('POST', '/PSIA/System/reboot', { timeout: 5000 });
+      return sendJson(res, r.ok ? 200 : r.status, { ok: r.ok, status: r.status });
     }
 
     if (p.startsWith('/api/')) return sendJson(res, 404, { ok: false, error: 'rota inexistente' });
@@ -288,8 +534,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   recoverOrphans();
-  console.log(`\n  ${CAMERA_NAME}`);
-  console.log(`  local:   http://localhost:${PORT}`);
+  console.log(`\n  ${CFG.cameraName}  (presets: ${Object.keys(CFG.presets || {}).join(', ')})`);
   for (const [name, addrs] of Object.entries(require('os').networkInterfaces())) {
     for (const a of addrs || []) {
       if (a.family === 'IPv4' && !a.internal) console.log(`  rede:    http://${a.address}:${PORT}   (${name})`);
@@ -298,5 +543,5 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  ctrl+c para parar\n');
 });
 
-process.on('SIGINT', () => { stopRecording(); process.exit(0); });
-process.on('SIGTERM', () => { stopRecording(); process.exit(0); });
+process.on('SIGINT', () => { if (rec) stopRecording(); process.exit(0); });
+process.on('SIGTERM', () => { if (rec) stopRecording(); process.exit(0); });
