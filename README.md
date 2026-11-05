@@ -35,6 +35,19 @@ câmera ──RTSP──> PC (server.js + ffmpeg) ──HTTP──> iPhone / TV 
 - Checklist de segurança dinâmico: telnet aberto?, senha vazia?, PSIA sem auth?
 - Link pro **painel de fábrica** original e reinício remoto da câmera
 
+### Painel de administração (usurpa o painel de fábrica)
+O app replica as funções do painel original via `PSIA/YG` — não precisa mais do painel de fábrica:
+
+- **Hora & NTP**: sincroniza relógio com o PC, troca servidor NTP (a.ntp.br por default China morta)
+- **Perfis de vídeo**: resolução, FPS, CBR/VBR, qualidade, bitrate alvo, GovLength, vencSmart — por perfil (0 e 1), validado contra as capabilities do firmware
+- **OSD**: nome exibido no vídeo, mostrar nome/data/hora/bitrate, tamanho de fonte
+- **Áudio**: volume do microfone, mute
+- **Detecção de movimento**: tipo desligado/área/humano, sensibilidade, área tela inteira, e-mail/buzina
+- **Segurança**: exigir auth no RTSP e no ONVIF, lista de usuários (senha oculta até tocar), **troca de senha** com atualização automática do `config.json` do servidor
+- **Ações**: reiniciar câmera
+
+Endpoint `/api/cam` tem **allowlist** de paths — nada de tonelada de proxy aberto.
+
 ## Como funciona
 
 | rota | o que faz |
@@ -47,6 +60,8 @@ câmera ──RTSP──> PC (server.js + ffmpeg) ──HTTP──> iPhone / TV 
 | `GET /api/recordings` / `DELETE /api/recording/:f` | lista/remove gravações |
 | `POST /api/ptz/<ação>` | pan/tilt/zoom/foco/íris/autopan/velocidade/presets |
 | `GET /api/device` | info do dispositivo + portas + detecção + telnet check |
+| `GET/PUT /api/cam` | **painel de config completo** (hora/NTP, perfis de vídeo, OSD, áudio, movimento, auth, usuários) |
+| `POST /api/user/password` | troca senha e atualiza config.json automaticamente |
 | `GET /api/status` | online + bitrate + gravação + sessões |
 | `POST /api/reboot` | reinicia a câmera (com dupla confirmação no UI) |
 

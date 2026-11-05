@@ -41,7 +41,29 @@ function loadConfig() {
 
 const CFG = loadConfig();
 const PORT = CFG.port || 8080;
-const RTSP = CFG.rtsp;
+let RTSP = CFG.rtsp;
+
+/* troca credenciais da camera em config.json (apos mudar senha do admin) */
+function persistConfig() {
+  try {
+    const clean = JSON.parse(JSON.stringify(CFG));
+    fs.writeFileSync(CFG_FILE, JSON.stringify(clean, null, 2));
+  } catch (e) { console.error('[config] falhou ao salvar:', e.message); }
+}
+
+function updateCameraPassword(newPassword) {
+  try {
+    const m = /^(rtsp:\/\/)([^:]+)(:[^@]+@)/.exec(CFG.rtsp);
+    if (!m) throw new Error('rtsp sem credencial');
+    CFG.rtsp = m[1] + m[2] + ':' + newPassword + '@' + CFG.rtsp.slice(m[1].length + m[2].length + m[3].length);
+    RTSP = CFG.rtsp;
+    persistConfig();
+    console.log('[config] senha do RTSP atualizada em config.json');
+  } catch (e) {
+    console.error('[config]', e.message);
+  }
+}
+
 const FFMPEG = path.isAbsolute(CFG.ffmpeg) ? CFG.ffmpeg : path.join(ROOT, CFG.ffmpeg);
 const HTTP_BASE = (CFG.httpBase || 'http://10.0.0.110').replace(/\/$/, '');
 
@@ -311,7 +333,202 @@ async function ptzProxy(action, body = {}) {
   }
 }
 
+/* --------------------------------------------------------- painel de config */
+
+const CAM_KEYS = new Set([
+  'YG/system/time', 'YG/system/ntpServers',
+  'YG/videoSetting/0', 'YG/videoSetting/1',
+  'YG/videoSetting/0/capabilities', 'YG/videoSetting/1/capabilities',
+  'YG/OSD/OSDConfig/0', 'YG/OSD/OSDConfig/1',
+  'YG/audioSetting', 'YG/event/motionDetection', 'YG/event/faceDetection',
+  'YG/authentication/rtsp', 'YG/authentication/onvif',
+  'YG/netWork/DDNS', 'YG/netWork/email',
+  'Security/AAA/users', 'System/deviceInfo', 'System/status'
+]);
+
+const CAM_WRITE_KEYS = new Set([
+  'YG/system/time', 'YG/system/ntpServers',
+  'YG/videoSetting/0', 'YG/videoSetting/1',
+  'YG/OSD/OSDConfig/0', 'YG/OSD/OSDConfig/1',
+  'YG/audioSetting', 'YG/event/motionDetection', 'YG/event/faceDetection',
+  'YG/authentication/rtsp', 'YG/authentication/onvif',
+  'YG/netWork/DDNS', 'YG/netWork/email'
+]);
+
+function xmlApplyEdits(xml, edits) {
+  const missing = [];
+  let out = xml;
+  for (const [tag, value] of Object.entries(edits)) {
+    const re = new RegExp(`<${tag}([^>]*)>[\\s\\S]*?</${tag}>`);
+    if (!re.test(out)) { missing.push(tag); continue; }
+    out = out.replace(re, `<${tag}$1>${value}</${tag}>`);
+  }
+  return { xml: out, missing };
+}
+
+/* PUT de XML psia com validacao do statusString do firmware */
+async function psiaPutXml(urlPath, xml) {
+  const url = HTTP_BASE + urlPath;
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 5000);
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'text/xml' },
+      body: xml,
+      signal: ctrl.signal
+    });
+    const body = await res.text();
+    const m = /<statusString>([^<]+)<\/statusString>/.exec(body);
+    return { ok: res.ok, status: res.status, statusString: m ? m[1] : (res.ok ? 'OK' : 'HTTP ' + res.status) };
+  } catch (e) {
+    return { ok: false, status: 0, statusString: e.message };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function camGetByPath(key) {
+  if (!CAM_KEYS.has(key)) return { ok: false, statusString: 'path fora da lista' };
+  const r = await psiaRetry('GET', '/PSIA/' + key);
+  return r.ok ? { ok: true, xml: r.body } : { ok: false, statusString: r.statusString || 'HTTP ' + r.status };
+}
+
+/* grava ?path=chave  |  recebe {edits:{tag:valor}} e aplica sobre o estado real */
+async function camPutByPath(key, edits, opts) {
+  if (!CAM_WRITE_KEYS.has(key) && key !== 'Security/AAA/users') {
+    return { ok: false, statusString: 'path fora da lista' };
+  }
+
+  /* autenticacao rtsp/onvif usam query ?enabled=, sem corpo */
+  if (key === 'YG/authentication/rtsp' || key === 'YG/authentication/onvif') {
+    const val = String(edits.enabled === undefined ? 'true' : edits.enabled);
+    const r = await psiaRequest('PUT', `/PSIA/${key}?enabled=${val}`, { timeout: 5000 });
+    return r.ok ? { ok: true, statusString: 'OK' } : { ok: false, statusString: 'HTTP ' + r.status };
+  }
+
+  /* detecca de movimento exige tudo em query string (formato do firmware) */
+  if (key === 'YG/event/motionDetection') {
+    const cur = await psiaRetry('GET', '/PSIA/' + key);
+    if (!cur.ok) return { ok: false, statusString: 'GET motionDetection falhou' };
+    const x = cur.body;
+    const cells = (x.match(/<mdCell[^>]*>([\d]+)<\/mdCell>/g) || []).length;
+    const cols = parseInt(xmlText(x, 'mdColumn'), 10) || 22;
+    const params = new URLSearchParams();
+    const q = (tag, fb) => edits[tag] !== undefined ? String(edits[tag]) : (xmlText(x, tag) || fb);
+    params.set('MotionType', q('MotionType', 'disable'));
+    params.set('sensitivityLevel', q('sensitivityLevel', '50'));
+    params.set('isSendMail', q('isSendMail', 'false'));
+    params.set('isBuzz', q('isBuzz', 'false'));
+    params.set('traceMode', q('traceMode', 'disable'));
+    params.set('mailInterval', q('mailInterval', '300'));
+    params.set('motionInterval', q('motionInterval', '10'));
+    params.set('mdRow', String(cells));
+    params.set('mdColumn', String(cols));
+    const all = opts && (opts.mdCellAll === '1' || opts.mdCellAll === '0') ? opts.mdCellAll : null;
+    for (let i = 0; i < cells; i++) {
+      let rowStr;
+      if (all !== null) rowStr = new Array(cols + 1).join(all);
+      else {
+        const m = new RegExp(`<mdCell[\\s\\S]*?>([\\d]+)</mdCell>`);
+        rowStr = null;
+      }
+      params.set('mdCell' + i, rowStr != null ? rowStr : xmlNth(x, 'mdCell', i));
+    }
+    const r = await psiaRequest('PUT', `/PSIA/${key}?${params.toString()}`, { timeout: 5000 });
+    const st = /<statusString>([^<]+)<\/statusString>/.exec(r.body || '');
+    return r.ok && (!st || st[1] === 'OK')
+      ? { ok: true, statusString: st ? st[1] : 'OK' }
+      : { ok: false, statusString: st ? st[1] : 'HTTP ' + r.status };
+  }
+
+  const cur = await psiaRetry('GET', '/PSIA/' + key);
+  if (!cur.ok) return { ok: false, statusString: 'GET falhou antes do PUT' };
+  const { xml, missing } = xmlApplyEdits(cur.body, edits);
+  if (missing.length) return { ok: false, statusString: 'tags inexistentes: ' + missing.join(', ') };
+
+  let outXml = xml;
+  /* grade de movimento: liga/desliga todas as celulas de uma vez */
+  if (opts && opts.mdCellAll && key === 'YG/event/motionDetection') {
+    const cols = parseInt(xmlText(xml, 'mdColumn'), 10) || 22;
+    const char = opts.mdCellAll === '1' ? '1' : '0';
+    const row = new Array(cols + 1).join(char);
+    outXml = xml.replace(/<mdCell[\s\S]*?<\/mdCell>/g, `<mdCell>${row}</mdCell>`);
+  }
+
+  const put = await psiaPutXml('/PSIA/' + key, outXml);
+  return put.ok ? { ok: true, statusString: put.statusString } : { ok: false, statusString: put.statusString };
+}
+
+/* sincroniza relogio da camera com o do PC */
+async function camSyncClock() {
+  const cur = await psiaRetry('GET', '/PSIA/YG/system/time');
+  if (!cur.ok) return { ok: false, statusString: 'GET time falhou' };
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  const now = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  const { xml, missing } = xmlApplyEdits(cur.body, { timeMode: 'manual', localTime: now });
+  if (missing.length) return { ok: false, statusString: 'tags: ' + missing.join(',') };
+  const r = await psiaPutXml('/PSIA/YG/system/time', xml);
+  return r;
+}
+
+/* troca senha de um usuario (inclusive admin) */
+async function camChangeUser(body) {
+  const userName = String(body.userName || '').trim();
+  let password = String(body.password || '');
+  const userType = String(body.userType || 'admin');
+  if (!userName || password.length < 1) {
+    return { ok: false, statusString: 'dados incompletos' };
+  }
+  const r = await psiaRetry('GET', '/PSIA/Security/AAA/users', { timeout: 4000 });
+  if (!r.ok) return { ok: false, statusString: 'GET users falhou' };
+  const list = xmlList(r.body, 'User');
+  /* firmware usa o INDICE na lista (0-based), nao o <id> do XML */
+  const idx = list.findIndex((u) => u.userName === userName);
+  if (idx < 0) return { ok: false, statusString: 'usuario ' + userName + ' nao encontrado' };
+  password = encodeURIComponent(password);
+  const rr = await psiaRequest('PUT', `/PSIA/Security/AAA/users/${idx}?userName=${encodeURIComponent(userName)}&password=${password}&userType=${userType}`, { timeout: 5000 });
+  let st = /<statusString>([^<]+)<\/statusString>/.exec(rr.body || '');
+  return rr.ok && st && st[1] === 'OK'
+    ? { ok: true, statusString: 'OK' }
+    : { ok: false, statusString: st ? st[1] : 'HTTP ' + rr.status };
+}
+
+function xmlCount(xml, tag) {
+  return (xml.match(new RegExp(`<${tag}[^>]*>`, 'g')) || []).length;
+}
+
+function xmlNth(xml, tag, n) {
+  let c = 0;
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'g');
+  let m;
+  while ((m = re.exec(xml))) {
+    if (c === n) return m[1];
+    c++;
+  }
+  return new Array((parseInt(xmlText(xml, 'mdColumn'), 10) || 22) + 1).join('1');
+}
+
+function xmlList(xml, tag) {
+  const re = new RegExp(`<${tag}[^>]*>[\\s\\S]*?</${tag}>`, 'g');
+  const out = [];
+  let m;
+  while ((m = re.exec(xml))) {
+    const blob = m[0];
+    const get = (t) => xmlText(blob, t);
+    out.push({
+      id: get('id'),
+      userName: get('userName'),
+      password: get('password'),
+      userType: get('userType')
+    });
+  }
+  return out;
+}
+
 /* --------------------------------------------------------- rotas/helpers */
+
 
 async function getBitrate() {
   const r = await psiaRequest('GET', '/PSIA/YG/curBitrate/0', { timeout: 1500 });
@@ -515,6 +732,35 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req);
       const r = await ptzProxy(action, body);
       return sendJson(res, r.ok ? 200 : 502, { ok: r.ok, status: r.status });
+    }
+
+    /* painel de configuracao (usurpa o painel de fabrica) */
+    if (p === '/api/cam' && method === 'GET') {
+      const key = url.searchParams.get('path');
+      const r0 = await camGetByPath(key);
+      let extra = null;
+      if (r0.ok && key === 'Security/AAA/users') extra = xmlList(r0.xml, 'User');
+      if (r0.ok && key === 'YG/event/motionDetection') extra = { mdColumn: xmlText(r0.xml, 'mdColumn'), mdRow: xmlText(r0.xml, 'mdRow'), cellCount: xmlCount(r0.xml, 'mdCell') };
+      return sendJson(res, r0.ok ? 200 : 502, Object.assign({ ok: r0.ok, path: key }, r0, extra ? { list: extra } : {}));
+    }
+    if (p === '/api/cam' && method === 'PUT') {
+      const body = await readBody(req);
+      const key = body.path;
+      console.error('[painel] PUT', key, body.mdCellAll || '');
+      if (key === 'YG/system/time') return sendJson(res, 200, await camSyncClock());
+      const r = await camPutByPath(key, body.edits || {}, { mdCellAll: body.mdCellAll });
+      console.error('[painel] PUT', key, '->', JSON.stringify(r).slice(0, 160));
+      if (r.ok) console.error(`[painel] ${key}: aplicado ok do firmware`);
+      return sendJson(res, r.ok ? 200 : 502, r);
+    }
+    if (p === '/api/user/password' && method === 'POST') {
+      const body = await readBody(req);
+      const oldRtsp = CFG.rtsp;
+      const r = await camChangeUser(body);
+      if (r.ok && body.userName === 'admin') updateCameraPassword(body.password);
+      return sendJson(res, r.ok ? 200 : 502, Object.assign(r, {
+        mustUpdateConfig: r.ok && body.userName === 'admin'
+      }));
     }
 
     if (p === '/api/reboot' && method === 'POST') {

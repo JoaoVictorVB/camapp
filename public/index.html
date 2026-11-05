@@ -26,7 +26,6 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
   }
 
-  /* ---------------------------------------------- header */
   header {
     display: flex; align-items: center; gap: 8px;
     padding: 10px 12px; background: var(--panel2);
@@ -45,12 +44,10 @@
   .chip.acc { color: var(--accent); border-color: #25463c; }
   .chip.warn { color: #ffb0b4; border-color: #55303a; }
 
-  /* ---------------------------------------------- views */
   main { flex: 1 1 auto; min-height: 0; position: relative; display: flex; }
   .view { display: none; flex: 1 1 auto; min-height: 0; flex-direction: column; }
   .view.active { display: flex; }
 
-  /* ---------------------------------------------- live */
   #stage { position: relative; flex: 1 1 auto; min-height: 0; background: #000; }
   #video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
   #overlay {
@@ -66,7 +63,6 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .bar { flex: 0 0 auto; padding: 8px 8px; display: flex; gap: 6px; background: var(--panel2); border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
-  .bar .btn { flex: 0 0 auto; min-height: 44px; padding: 8px 12px; }
   .buttons { display: flex; gap: 6px; flex: 1; }
   .buttons .btn { flex: 1; }
 
@@ -82,42 +78,65 @@
   button:disabled { opacity: .45; }
   button.on { border-color: var(--warn); color: #ff8b8f; background: #2a1417; }
   button.acc { border-color: #25463c; color: var(--accent); }
+  button.danger { border-color: #55303a; color: #ff9ba0; }
 
-  /* preset chips row */
   .presets { display: flex; gap: 5px; padding: 8px 8px 2px; background: var(--panel2); }
-  .presets button {
-    flex: 1; min-height: 34px; padding: 7px 4px; flex-direction: row; font-size: 12px;
-  }
+  .presets button { flex: 1; min-height: 34px; padding: 7px 4px; flex-direction: row; font-size: 12px; }
   .presets button.sel { border-color: var(--accent); color: var(--accent); background: #10231d; }
 
   body.fs header, body.fs .bar, body.fs nav { display: none; }
   body.fs #stage { position: fixed; inset: 0; z-index: 30; }
-  #fsHint {
-    position: fixed; top: 12px; left: 12px; font-size: 11px; color: #55677c;
-    opacity: 0; transition: opacity .4s; z-index: 40; pointer-events: none;
-  }
+  #fsHint { position: fixed; top: 12px; left: 12px; font-size: 11px; color: #55677c; opacity: 0; transition: opacity .4s; z-index: 40; pointer-events: none; }
   body.fs.touch #fsHint { opacity: 1; }
 
-  /* ---------------------------------------------- scrolleables */
   .scroll { overflow-y: auto; padding: 12px; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; }
   .card {
     background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
     padding: 12px 14px; margin-bottom: 10px;
   }
-  .card h3 { margin: 0 0 10px; font-size: 13px; color: var(--dim); font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+  .card h3 { margin: 0 0 10px; font-size: 13px; color: var(--dim); font-weight: 700; letter-spacing: .4px; text-transform: uppercase; display: flex; align-items: center; gap: 6px; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #16202b; }
   .row:last-child { border-bottom: 0; }
   .row .k { color: var(--dim); font-size: 13px; }
   .row .v { font-size: 13px; text-align: right; word-break: break-all; }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .field input[type="text"], .field input[type="password"], .field input[type="number"], .field select {
+    width: 100%; background: var(--panel2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px;
+    font-family: inherit; font-size: 14px; -webkit-appearance: none; appearance: none;
+  }
+  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: transparent; margin: 0; }
+  input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: #22303f; border-radius: 3px; }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); margin-top: -8px; border: 0;
+  }
+  .sliderLabels { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-top: -6px; }
+  .switchrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #16202b; }
+  .switchrow:last-child { border-bottom: 0; }
+  .switch { position: relative; width: 46px; height: 26px; flex: 0 0 auto; }
+  .switch input { display: none; }
+  .switch .tg { position: absolute; inset: 0; background: #22303f; border-radius: 13px; transition: .2s; }
+  .switch .tg:before {
+    content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+    background: #8aa0b8; top: 3px; left: 3px; transition: .2s;
+  }
+  .switch input:checked + .tg { background: #25463c; }
+  .switch input:checked + .tg:before { background: var(--accent); transform: translateX(20px); }
 
   .warnbox {
     background: #26161a; border: 1px solid #55303a; border-radius: var(--radius);
     padding: 10px 12px; color: #ffb0b4; font-size: 12.5px; margin-bottom: 10px; line-height: 1.5;
   }
   .warnbox b { color: #ff8b8f; }
+  .okbox {
+    background: #10231d; border: 1px solid #25463c; border-radius: var(--radius);
+    padding: 10px 12px; color: #8ff0c5; font-size: 12.5px; margin-bottom: 10px; line-height: 1.5;
+  }
 
-  /* ---------------------------------------------- ptz */
+  /* ptz */
   .ptzgrid { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 52px); gap: 6px; justify-content: center; }
   .ptzgrid button { padding: 0; min-height: 0; }
   .ptzgrid .ph { display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 20px; }
@@ -127,24 +146,13 @@
   .padrow .grp .b { display: flex; gap: 6px; }
   .padrow .grp .b button { flex: 1; min-height: 40px; }
 
-  input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; background: transparent; margin: 0; }
-  input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: #22303f; border-radius: 3px; }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
-    background: var(--accent); margin-top: -8px; border: 0;
-  }
-  .sliderLabels { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-top: -6px; }
-
   #ptzPreviewWrap { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; margin-bottom: 10px; display: none; }
   #ptzPreviewWrap.open { display: block; }
   #ptzPreview { width: 100%; height: 150px; object-fit: cover; display: block; }
 
-  /* ---------------------------------------------- listas */
+  /* listas */
   ul.list { list-style: none; margin: 0; padding: 0; }
-  .list li {
-    display: flex; align-items: center; gap: 10px; padding: 10px 2px;
-    border-bottom: 1px solid #16202b;
-  }
+  .list li { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid #16202b; }
   .list li:last-child { border-bottom: 0; }
   .list a, .list .name { color: var(--text); text-decoration: none; font-size: 13px; flex: 1; min-width: 0; }
   .list a.localtime { color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -160,7 +168,6 @@
 
   .empty { color: var(--dim); font-size: 13px; text-align: center; padding: 22px 0; }
 
-  /* ---------------------------------------------- nav */
   nav {
     flex: 0 0 auto; display: flex; background: var(--panel2);
     border-top: 1px solid var(--border);
@@ -180,16 +187,6 @@
     border: 1px solid var(--border); max-width: 86vw; text-align: center; z-index: 50;
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-  .switch { position: relative; width: 46px; height: 26px; flex: 0 0 auto; }
-  .switch input { display: none; }
-  .switch .tg { position: absolute; inset: 0; background: #22303f; border-radius: 13px; transition: .2s; }
-  .switch .tg:before {
-    content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%;
-    background: #8aa0b8; top: 3px; left: 3px; transition: .2s;
-  }
-  .switch input:checked + .tg { background: #25463c; }
-  .switch input:checked + .tg:before { background: var(--accent); transform: translateX(20px); }
 </style>
 </head>
 <body>
@@ -221,7 +218,6 @@
           <button id="btnPhoto"><span class="ico">📸</span>Foto</button>
           <button id="btnRec" class="acc"><span class="ico">⏺</span>Gravar</button>
           <button id="btnFs"><span class="ico">⛶</span>Tela</button>
-          <button id="btnList" style="display:none"></button>
         </div>
       </div>
     </section>
@@ -237,7 +233,7 @@
           <h3>Pan & Tilt</h3>
           <div class="ptzgrid">
             <button data-pan="-1" data-tilt="1">↖</button><button data-pan="0" data-tilt="1">↑</button><button data-pan="1" data-tilt="1">↗</button>
-            <button data-pan="-1" data-tilt="0">←</button><div class="ph"> move </div><button data-pan="1" data-tilt="0">→</button>
+            <button data-pan="-1" data-tilt="0">←</button><div class="ph">🕹</div><button data-pan="1" data-tilt="0">→</button>
             <button data-pan="-1" data-tilt="-1">↙</button><button data-pan="0" data-tilt="-1">↓</button><button data-pan="1" data-tilt="-1">↘</button>
           </div>
           <div style="margin-top:10px">
@@ -252,20 +248,20 @@
           <div class="padrow" style="margin-top:0">
             <div class="grp">
               <div class="h">Zoom</div>
-              <div class="b"><button id="zoomOut" data-hold="1">−</button><button id="zoomIn" data-hold="1">+</button></div>
+              <div class="b"><button id="zoomOut">−</button><button id="zoomIn">+</button></div>
             </div>
             <div class="grp">
               <div class="h">Foco</div>
-              <div class="b"><button id="focusOut" data-hold="1">−</button><button id="autoFocus">AF</button><button id="focusIn" data-hold="1">+</button></div>
+              <div class="b"><button id="focusOut">−</button><button id="autoFocus">AF</button><button id="focusIn">+</button></div>
             </div>
           </div>
           <div class="padrow">
             <div class="grp" style="flex:1.2">
               <div class="h">Íris</div>
-              <div class="b"><button id="irisOut" data-hold="1">−</button><button id="irisIn" data-hold="1">+</button></div>
+              <div class="b"><button id="irisOut">−</button><button id="irisIn">+</button></div>
             </div>
             <div class="grp" style="flex:1.6">
-              <div class="h">Automatização</div>
+              <div class="h">Automático</div>
               <div class="b">
                 <label class="switch" style="margin-right:6px">
                   <input type="checkbox" id="autoPanChk"><span class="tg"></span>
@@ -277,20 +273,126 @@
         </div>
 
         <div class="card">
-          <h3>Presets <span style="color:var(--dim);font-weight:400;text-transform:none">· salva a posição atual do motor</span></h3>
+          <h3>Presets · salva a posição do motor</h3>
           <div style="display:flex;gap:6px;margin-bottom:8px">
             <select id="presetSel" style="flex:1;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-family:inherit"></select>
             <button id="presetGo" class="acc" style="min-height:0;padding:8px 12px">Ir</button>
           </div>
           <div style="display:flex;gap:6px">
             <button id="presetSave" style="flex:1;min-height:0;padding:8px">💾 Salvar posição</button>
-            <button id="presetDel" style="flex:1;min-height:0;padding:8px;color:#ff9ba0">🗑 Remover</button>
+            <button id="presetDel" class="danger" style="flex:1;min-height:0;padding:8px">🗑 Remover</button>
           </div>
         </div>
 
         <div class="bar" style="border:0;padding:6px 8px 2px">
           <label class="switch"><input type="checkbox" id="miniPrevChk"><span class="tg"></span></label>
-          <span style="font-size:12px;color:var(--dim)">mini preview enquanto controla (usa mais banda)</span>
+          <span style="font-size:12px;color:var(--dim)">mini preview enquanto controla</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PAINEL ===================== -->
+    <section class="view" id="view-panel">
+      <div class="scroll" id="panelScroll">
+        <div id="panelStatus"></div>
+
+        <div class="card">
+          <h3>Dispositivo</h3>
+          <div id="deviceGrid" class="grid2"></div>
+        </div>
+
+        <div class="card">
+          <h3>Hora & NTP</h3>
+          <div class="row"><span class="k">Relógio da câmera</span><span class="v" id="camClock">--</span></div>
+          <div class="row"><span class="k">Modo</span><span class="v" id="camTimeMode">--</span></div>
+          <div class="row"><span class="k">Fuso (firmware)</span><span class="v" id="camTimeTz">--</span></div>
+          <div class="field" style="margin-top:10px">
+            <label>Servidor NTP</label>
+            <input type="text" id="ntpHost" placeholder="a.ntp.br">
+          </div>
+          <div style="display:flex;gap:6px">
+            <button id="btnSyncClock" class="acc" style="flex:1;min-height:0;padding:9px">🕒 Sincronizar agora</button>
+            <button id="btnNtpSave" style="flex:1;min-height:0;padding:9px">Aplicar NTP</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Perfil de vídeo</h3>
+          <div class="presets" style="padding:0 0 10px" id="vidProfiles"></div>
+          <div id="vidEditor"></div>
+          <div class="warnbox" id="vidWarn" style="margin-top:10px">⚠ Mudar <b>perfil principal</b> muda a resolução do RTSP e afeta gravação e o stream deste app.</div>
+          <button id="vidApply" class="acc" style="width:100%">Aplicar no perfil selecionado</button>
+        </div>
+
+        <div class="card">
+          <h3>Imagem & OSD</h3>
+          <div class="field">
+            <label>Nome exibido no vídeo</label>
+            <input type="text" id="osdName">
+          </div>
+          <div class="switchrow"><span class="k">Mostrar nome</span><label class="switch"><input type="checkbox" id="osdNameShow"><span class="tg"></span></label></div>
+          <div class="switchrow"><span class="k">Mostrar data/hora</span><label class="switch"><input type="checkbox" id="osdDateShow"><span class="tg"></span></label></div>
+          <div class="switchrow"><span class="k">Mostrar bitrate</span><label class="switch"><input type="checkbox" id="osdBitShow"><span class="tg"></span></label></div>
+          <div class="field">
+            <label>Tamanho da fonte</label>
+            <select id="osdFontSize">
+              <option value="16">pequena</option><option value="24">média</option><option value="32">grande</option>
+            </select>
+          </div>
+          <button id="osdApply" class="acc" style="width:100%">Aplicar OSD</button>
+        </div>
+
+        <div class="card">
+          <h3>Áudio (microfone)</h3>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:2px">Volume de entrada: <b id="audVolVal">--</b></div>
+          <input type="range" id="audVol" min="0" max="100" step="1" value="50">
+          <div class="switchrow" style="margin-top:2px">
+            <span class="k">Mudo</span>
+            <label class="switch"><input type="checkbox" id="audMute"><span class="tg"></span></label>
+          </div>
+          <button id="audApply" class="acc" style="width:100%;margin-top:8px">Aplicar áudio</button>
+        </div>
+
+        <div class="card">
+          <h3>Detecção de movimento</h3>
+          <div class="field">
+            <label>Detecção</label>
+            <select id="mdType">
+              <option value="disable">desligada</option><option value="cell">por área</option><option value="human">humano</option>
+            </select>
+          </div>
+          <div style="font-size:12px;color:var(--dim);margin-bottom:2px">Sensibilidade: <b id="mdSensVal">--</b></div>
+          <input type="range" id="mdSens" min="0" max="100" step="1" value="50">
+          <div class="switchrow"><span class="k">Enviar e-mail</span><label class="switch"><input type="checkbox" id="mdMail"><span class="tg"></span></label></div>
+          <div class="switchrow"><span class="k">Buzina local</span><label class="switch"><input type="checkbox" id="mdBuzz"><span class="tg"></span></label></div>
+          <div class="switchrow"><span class="k">Área: tela inteira</span><label class="switch"><input type="checkbox" id="mdFull"><span class="tg"></span></label></div>
+          <button id="mdApply" class="acc" style="width:100%;margin-top:8px">Aplicar movimento</button>
+        </div>
+
+        <div class="card">
+          <h3>Segurança</h3>
+          <div class="switchrow"><span class="k">Exigir auth no RTSP</span><label class="switch"><input type="checkbox" id="secRtsp"><span class="tg"></span></label></div>
+          <div class="switchrow"><span class="k">Exigir auth ONVIF</span><label class="switch"><input type="checkbox" id="secOnvif"><span class="tg"></span></label></div>
+          <h3 style="margin-top:14px">Usuários</h3>
+          <div id="userList"></div>
+          <div class="field" style="margin-top:10px">
+            <label>Nova senha</label>
+            <input type="password" id="newPass" placeholder="mín. 1 caractere… a firmware aceita 1–16">
+          </div>
+          <div class="field">
+            <label>Confirmar senha</label>
+            <input type="password" id="newPass2">
+          </div>
+          <button id="passApply" class="danger" style="width:100%">🔑 Trocar senha do usuário selecionado</button>
+          <div class="warnbox" style="margin-top:10px">Trocar a senha do <b>admin</b> atualiza o RTSP do seu config.json automaticamente. Streaming antigo morre até reconectar.</div>
+        </div>
+
+        <div class="card">
+          <h3>Ações</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button id="btnReboot" class="danger">♻ Reiniciar câmera</button>
+          </div>
+          <div class="row" style="margin-top:8px"><span class="k">Painel de fábrica</span><span class="v"><a style="color:var(--accent)" id="adminUiLink" href="#" target="_blank" rel="noopener">abrir ↗</a></span></div>
         </div>
       </div>
     </section>
@@ -314,45 +416,14 @@
       </div>
     </section>
 
-    <!-- ===================== SISTEMA ===================== -->
-    <section class="view" id="view-sys">
-      <div class="scroll">
-        <div id="sysWarns"></div>
-        <div class="card">
-          <h3>Dispositivo</h3>
-          <div id="deviceGrid" class="grid2"></div>
-        </div>
-        <div class="card">
-          <h3>Status</h3>
-          <div id="sysRows"></div>
-        </div>
-        <div class="card">
-          <h3>Portas</h3>
-          <div id="portRows"></div>
-        </div>
-        <div class="card">
-          <h3>Ações</h3>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button id="btnAdminUi">🖥 Abrir painel de fábrica (web)</button>
-            <button id="btnReboot" style="color:#ff9ba0">♻ Reiniciar câmera</button>
-          </div>
-        </div>
-        <div class="card">
-          <h3>App</h3>
-          <div class="row"><span class="k">Uptime do servidor</span><span class="v" id="appUptime">--</span></div>
-          <div class="row"><span class="k">Versão</span><span class="v">CamApp v2.0</span></div>
-        </div>
-      </div>
-    </section>
-
   </main>
 
   <nav>
     <button data-view="live" class="sel"><span class="ico">📺</span>Ao vivo</button>
     <button data-view="ptz"><span class="ico">🕹</span>Controle</button>
+    <button data-view="panel"><span class="ico">⚙️</span>Painel</button>
     <button data-view="photos"><span class="ico">📸</span>Fotos</button>
     <button data-view="videos"><span class="ico">🎬</span>Vídeos</button>
-    <button data-view="sys"><span class="ico">⚙️</span>Sistema</button>
   </nav>
 </div>
 <div id="toast"></div>
@@ -363,7 +434,6 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
-  /* ================================================================ geral */
   function toast(msg) {
     var t = $('toast');
     t.textContent = msg;
@@ -374,28 +444,43 @@
 
   function api(path, opts) {
     return fetch(path, Object.assign({ cache: 'no-store' }, opts || {}))
-      .then(function (r) { return r.json(); });
+      .then(function (r) {
+        var ct = r.headers.get('content-type') || '';
+        if (ct.indexOf('json') >= 0) return r.json();
+        return { ok: r.ok, status: r.status };
+      });
   }
+
+  /* painel: GET/PUT html XML psia com edits de tags */
+  function camGet(path) {
+    return api('/api/cam?path=' + encodeURIComponent(path));
+  }
+  function camPut(path, edits) {
+    return api('/api/cam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: path, edits: edits }) });
+  }
+  function xmlText_(xml, tag) {
+    if (!xml) return '';
+    var m = new RegExp('<' + tag + '[^>]*>([\\s\\S]*?)</' + tag + '>', 'i').exec(xml);
+    return m ? m[1].trim() : '';
+  }
+  function boolOf(v) { return String(v) === 'true'; }
 
   function humanSize(b) {
     if (b > 1048576) return (b / 1048576).toFixed(1) + ' MB';
     if (b > 1024) return (b / 1024).toFixed(0) + ' KB';
     return b + ' B';
   }
-
   function fmtDate(ms) {
     var d = new Date(ms);
     var p = function (n) { return (n < 10 ? '0' : '') + n; };
-    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
 
-  /* ================================================================ tabs */
+  /* ================================================================ taps */
   var currentView = 'live';
   var navButtons = document.querySelectorAll('nav button');
   for (var i = 0; i < navButtons.length; i++) {
-    navButtons[i].addEventListener('click', function () {
-      switchView(this.getAttribute('data-view'));
-    });
+    navButtons[i].addEventListener('click', function () { switchView(this.getAttribute('data-view')); });
   }
   function switchView(v) {
     currentView = v;
@@ -407,7 +492,7 @@
     else ptzPreviewOff();
     if (v === 'photos') loadPhotos();
     if (v === 'videos') loadRecordings();
-    if (v === 'sys') loadSystem();
+    if (v === 'panel') loadPanel();
   }
 
   /* ================================================================ live */
@@ -418,14 +503,11 @@
   var recording = false;
   var preset = localStorage.getItem('cam.preset') || 'alta';
 
-  function applyStreamSrc() {
-    video.src = '/stream.mjpg?_=' + Date.now() + '&q=' + encodeURIComponent(preset);
-  }
   function connect() {
     clearTimeout(reconnectTimer);
     attempt++;
     setState('wait', attempt === 1 ? 'conectando na câmera…' : 'reconectando… (' + attempt + ')');
-    applyStreamSrc();
+    video.src = '/stream.mjpg?_=' + Date.now() + '&q=' + encodeURIComponent(preset);
   }
   function scheduleReconnect() {
     clearTimeout(reconnectTimer);
@@ -439,11 +521,7 @@
   }
 
   video.addEventListener('load', function () {
-    if (video.naturalWidth > 0) {
-      attempt = 0;
-      setState('on');
-      $('chipFps').textContent = fpsLabel[preset] || '-- fps';
-    }
+    if (video.naturalWidth > 0) { attempt = 0; setState('on'); $('chipFps').textContent = fpsLabel[preset] || '-- fps'; }
   });
   video.addEventListener('error', function () {
     if (currentView === 'live') { setState('off', 'sem sinal da câmera'); scheduleReconnect(); }
@@ -452,7 +530,6 @@
     if (!document.hidden) connect();
   });
 
-  /* presets de qualidade */
   var presetLabels = { ultra: 'Ultra', alta: 'Alta', media: 'Média', economia: 'Economia' };
   var fpsLabel = { ultra: '15 fps', alta: '10 fps', media: '8 fps', economia: '5 fps' };
   function renderPresetChips() {
@@ -474,7 +551,6 @@
   }
   renderPresetChips();
 
-  /* gravacao */
   function paintRec() {
     var b = $('btnRec');
     b.classList.toggle('on', recording);
@@ -494,13 +570,12 @@
       .then(function () { $('btnRec').disabled = false; });
   });
 
-  /* foto */
   $('btnPhoto').addEventListener('click', function () {
     toast('capturando…');
     api('/api/photo', { method: 'POST' })
       .then(function (j) {
         if (j.ok) { toast('foto salva ✓'); download('/photos/' + j.file); }
-        else toast('sem imagem (tenta de novo)');
+        else toast('sem imagem ( tenta de novo)');
       })
       .catch(function () { toast('falhou'); });
   });
@@ -511,7 +586,6 @@
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
 
-  /* tela cheia */
   function toggleFs() {
     var on = document.body.classList.toggle('fs');
     $('btnFs').querySelector('.ico').textContent = on ? '⤡' : '⛶';
@@ -526,7 +600,6 @@
     if (document.body.classList.contains('fs')) toggleFs();
   });
 
-  /* poll de status */
   function poll() {
     api('/api/status')
       .then(function (s) {
@@ -542,10 +615,16 @@
   poll();
 
   /* ================================================================ PTZ */
+  var ptzMoving = false;
   function ptzStart(pan, tilt) {
-    api('/api/ptz/move', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pan: pan, tilt: tilt }) });
+    if (ptzMoving) return;
+    ptzMoving = true;
+    var body = JSON.stringify({ pan: pan, tilt: tilt });
+    api('/api/ptz/move', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body });
   }
   function ptzStop() {
+    if (!ptzMoving) return;
+    ptzMoving = false;
     api('/api/ptz/stop', { method: 'POST' });
   }
   document.querySelectorAll('.ptzgrid button[data-pan]').forEach(function (b) {
@@ -583,18 +662,15 @@
 
   $('autoPanChk').addEventListener('change', function () {
     api('/api/ptz/autoPan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ on: this.checked }) })
-      .then(function () { toast('varredura auto: ' + ($('autoPanChk').checked ? 'on' : 'off')); });
+      .then(function () { toast('varredura auto: ' + ($('autoPanChk').checked ? 'ligada' : 'desligada')); });
   });
 
   $('speed').addEventListener('input', function () { $('speedVal').textContent = this.value; });
   $('speed').addEventListener('change', function () {
     api('/api/ptz/speed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: parseInt(this.value, 10) }) });
   });
-  function readSpeed() {
-    try { $('speedVal').textContent = $('speed').value; } catch (_) {}
-  }
+  function readSpeed() { $('speedVal').textContent = $('speed').value; }
 
-  /* presets */
   function loadPresets() {
     api('/api/ptz/presets')
       .then(function (j) {
@@ -618,10 +694,10 @@
     var id = $('presetSel').value;
     if (!id) return toast('sem preset');
     api('/api/ptz/gotoPreset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) })
-      .then(function () { toast('indo pro ' + ($('presetSel').selectedOptions[0] || {}).text); });
+      .then(function () { toast('indo pro ' + (($('presetSel').selectedOptions[0] || {}).text || '')); });
   });
   $('presetSave').addEventListener('click', function () {
-    var id = prompt('Número do preset (1-' + 16 + '):');
+    var id = prompt('Número do preset (1-16):');
     if (!id) return;
     id = parseInt(id, 10);
     if (!(id >= 1 && id <= 16)) return toast('inválido');
@@ -636,27 +712,404 @@
       .then(function () { toast('preset apagado'); loadPresets(); });
   });
 
-  /* mini preview */
   function ptzPreviewOn() {
     var w = $('ptzPreviewWrap');
     w.classList.add('open');
     var img = $('ptzPreview');
-    if (!img.src) {
+    if (!img.getAttribute('src')) {
       var tick = function () {
-        if (!w.classList.contains('open') || !w.isConnected) return;
+        if (!w.classList.contains('open') || currentView !== 'ptz') return;
         img.src = '/snap.jpg?_=' + Date.now();
+        setTimeout(tick, 700);
       };
-      img.addEventListener('load', function () { setTimeout(tick, 600); });
       tick();
     }
   }
   function ptzPreviewOff() {
     $('ptzPreviewWrap').classList.remove('open');
     var img = $('ptzPreview');
-    if (img.src) { img.removeAttribute('src'); }
+    img.removeAttribute('src');
   }
   $('miniPrevChk').addEventListener('change', function () {
     if (this.checked) ptzPreviewOn(); else ptzPreviewOff();
+  });
+
+  /* ================================================================ painel */
+  var vidProfile = 0;
+
+  function loadPanel() {
+    panelState('carregando painel…');
+    /* dispositivo + status + hora em paralelo */
+    Promise.all([
+      api('/api/device'),
+      camGet('System/status'),
+      camGet('YG/system/time'),
+      api('/api/status')
+    ]).then(function (arr) {
+      var d = arr[0], st = arr[1], tm = arr[2], s = arr[3];
+      renderStatusCard(d, tm, s);
+      renderDevice(d);
+      renderTime(tm);
+    });
+    loadVideoProfile();
+    loadOSD();
+    loadAudio();
+    loadMotion();
+    loadSecurity();
+  }
+
+  function panelState(msg, box) {
+    if (msg) {
+      $('panelStatus').innerHTML = '<div class="card" style="display:flex;gap:10px;align-items:center"><div class="spin"></div><span style="color:var(--dim)">' + msg + '</span></div>';
+    } else { $('panelStatus').innerHTML = box || ''; }
+  }
+
+  function renderStatusCard(d, tm, s) {
+    /* alerts de seguranca */
+    var warns = [];
+    if (d.telnetOpen === true) {
+      warns.push('<div class="warnbox"><b>⚠ Telnet (porta 23) aberto.</b><br> Qualquer dispositivo na rede pode tentar login no sistema Linux da câmera.</div>');
+    }
+    warns.push('<div class="warnbox"><b>⚠ /PSIA/Security/AAA/users responde sem senha</b> e traz <b>usuário e senha em texto puro</b>. Troque a senha abaixo e, além disso, bloqueie a câmera no roteador.</div>');
+    if (d.faceDetection && d.faceDetection.enabled === 'true') {
+      warns.push('<div class="okbox">ℹ Detecção de rosto do firmware <b>habilitada</b> — não há API de eventos via HTTP, então não dá pra alertar por esse caminho.</div>');
+    }
+    panelState(null, warns.join(''));
+    $('adminUiLink').href = d.adminUiUrl;
+    var clockEl = $('camClock');
+    if (clockEl && tm.ok) clockEl.textContent = xmlText_(tm.xml, 'localTime');
+  }
+
+  function renderDevice(d) {
+    var g = $('deviceGrid');
+    g.innerHTML = '';
+    if (d.device) {
+      [['deviceName', 'Nome'], ['model', 'Modelo'], ['serialNumber', 'Serial'], ['macAddress', 'MAC'], ['firmwareVersion', 'Firmware'], ['bootVersion', 'Boot']]
+        .forEach(function (pair) {
+          g.insertAdjacentHTML('beforeend',
+            '<div style="padding:6px 0"><div style="font-size:11px;color:var(--dim)">' + pair[1] + '</div><div style="font-size:13px;word-break:break-all">' + (d.device[pair[0]] || '--') + '</div></div>');
+        });
+    } else {
+      g.innerHTML = '<span style="color:var(--dim);font-size:13px">câmera não responde agora</span>';
+    }
+  }
+
+  function renderTime(tm) {
+    if (tm.ok) {
+      $('camTimeMode').textContent = xmlText_(tm.xml, 'timeMode');
+      $('camTimeTz').textContent = xmlText_(tm.xml, 'timeZone');
+    }
+  }
+
+  function renderTimeClockTick() {
+    /* le relogio da camera a cada 30s enquanto no painel */
+    if (currentView !== 'panel') return;
+    camGet('YG/system/time').then(function (tm) {
+      if (tm.ok) $('camClock').textContent = xmlText_(tm.xml, 'localTime');
+      setTimeout(renderTimeClockTick, 30000);
+    });
+  }
+
+  /* ------ hora & ntp ------ */
+  $('btnSyncClock').addEventListener('click', function () {
+    this.disabled = true;
+    api('/api/cam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: 'YG/system/time' }) })
+      .then(function (j) {
+        toast(j.ok ? 'relógio sincronizado ✓' : 'falhou: ' + j.statusString);
+        if (j.ok) $('camClock').textContent = 'sincronizado';
+      })
+      .then(function () { $('btnSyncClock').disabled = false; });
+  });
+  $('btnNtpSave').addEventListener('click', function () {
+    var host = $('ntpHost').value.trim();
+    if (!host) return toast('digite o servidor NTP');
+    api('/api/cam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: 'YG/system/ntpServers', edits: { hostName: host, id: '1' } }) })
+      .then(function (j) {
+        toast(j.ok ? 'NTP aplicado ✓ (a câmera sincroniza sozinha)' : 'falhou: ' + j.statusString);
+        if (j.ok) {
+          /* religa o modo NTP na hora */
+          api('/api/cam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path: 'YG/system/time', edits: {} }) });
+          setTimeout(function () { camGet('YG/system/time').then(function (tm) { if (tm.ok) { $('camTimeMode').textContent = xmlText_(tm.xml, 'timeMode'); $('camClock').textContent = xmlText_(tm.xml, 'localTime'); } }); }, 3000);
+        }
+      });
+  });
+
+  /* ------ perfil de video ------ */
+  var vidCaps = null;
+  var vidCur = null;
+  function loadVideoProfile() {
+    var box = $('vidProfiles');
+    box.innerHTML = '';
+    [['0', 'Principal (0)'], ['1', 'Secundário (1)']].forEach(function (pair) {
+      var b = document.createElement('button');
+      b.textContent = pair[1];
+      b.className = (parseInt(pair[0], 10) === vidProfile ? 'sel' : '');
+      b.addEventListener('click', function () {
+        vidProfile = parseInt(pair[0], 10);
+        loadVideoProfile();
+      });
+      box.appendChild(b);
+    });
+    var ed = $('vidEditor');
+    ed.innerHTML = '<span style="color:var(--dim);font-size:13px">carregando perfil ' + vidProfile + '…</span>';
+    Promise.all([
+      camGet('YG/videoSetting/' + vidProfile),
+      camGet('YG/videoSetting/' + vidProfile + '/capabilities')
+    ]).then(function (arr) {
+      vidCur = arr[0];
+      vidCaps = arr[1];
+      if (!vidCur.ok || !vidCaps.ok) {
+        ed.innerHTML = '<span style="color:#ffb0b4;font-size:13px">falha a ler o perfil</span>';
+        return;
+      }
+      renderVidEditor();
+    });
+  }
+
+  function optList(capsXml, tag) {
+    var m = new RegExp('<' + tag + '\\s+opt="([^"]+)"').exec(capsXml);
+    return m ? m[1].split(',') : [];
+  }
+  function optMin(capsXml, tag) {
+    var m = new RegExp('<' + tag + '\\s+min="([^"]+)"').exec(capsXml);
+    return m ? parseFloat(m[1]) : null;
+  }
+  function optMax(capsXml, tag) {
+    var m = new RegExp('<' + tag + '\\s+max="([^"]+)"').exec(capsXml);
+    return m ? parseFloat(m[1]) : null;
+  }
+
+  function renderVidEditor() {
+    var cur = vidCur.xml;
+    var caps = vidCaps.xml;
+    var w = xmlText_(cur, 'videoResolutionWidth');
+    var h = xmlText_(cur, 'videoResolutionHeight');
+    var ws = optList(caps, 'videoResolutionWidth');
+    var hs = optList(caps, 'videoResolutionHeight');
+    var resOpts = ws.map(function (W, i) { return W + 'x' + (hs[i] || '?'); });
+    var resIdx = ws.indexOf(w);
+    var qmode = xmlText_(cur, 'VideoQualityControlType');
+    var fq = xmlText_(cur, 'fixedQuality');
+    var cbr = xmlText_(cur, 'constantBitRate');
+    var fps = xmlText_(cur, 'maxFrameRate');
+    var fpsMin = optMin(caps, 'maxFrameRate');
+    var fpsMax = optMax(caps, 'maxFrameRate');
+    var cbrMin = optMin(caps, 'constantBitRate');
+    var cbrMax = optMax(caps, 'constantBitRate');
+    var gov = xmlText_(cur, 'GovLength');
+    var smart = xmlText_(cur, 'vencSmart');
+    var smartOpts = optList(caps, 'vencSmart');
+
+    var html = '';
+    html += '<div class="field"><label>Resolução</label><select id="edRes">';
+    resOpts.forEach(function (r, i) {
+      html += '<option value="' + i + '"' + (i === resIdx ? ' selected' : '') + '>' + r + '</option>';
+    });
+    html += '</select></div>';
+    html += '<div class="grid2">';
+    html += '<div class="field"><label>FPS (' + fpsMin + '-' + fpsMax + ')</label><input type="number" id="edFps" min="' + fpsMin + '" max="' + fpsMax + '" step="0.01" value="' + fps + '"></div>';
+    html += '<div class="field"><label>Modo de taxa</label><select id="edQmode"><option' + (qmode === 'CBR' ? ' selected' : '') + '>CBR</option><option' + (qmode === 'VBR' ? ' selected' : '') + '>VBR</option></select></div>';
+    html += '</div>';
+    html += '<div class="field"><label>Qualidade fixa (VBR) — 0 melhor · 5 pior</label><select id="edFq">';
+    for (var i = 0; i <= 5; i++) html += '<option value="' + i + '"' + (fq === String(i) ? ' selected' : '') + '>' + i + '</option>';
+    html += '</select></div>';
+    html += '<div class="field"><label>Bitrate CBR alvo (kbps ' + cbrMin + '-' + cbrMax + ')</label><input type="number" id="edCbr" min="' + cbrMin + '" max="' + cbrMax + '" step="32" value="' + cbr + '"></div>';
+    html += '<div class="field"><label>Gov length (frames por keyframe)</label><input type="number" id="edGov" value="' + gov + '"></div>';
+    if (smartOpts.length) {
+      html += '<div class="field"><label>venc smart</label><select id="edSmart">';
+      smartOpts.forEach(function (so) { html += '<option' + (smart === so ? ' selected' : '') + '>' + so + '</option>'; });
+      html += '</select></div>';
+    }
+    $('vidEditor').innerHTML = html;
+  }
+
+  $('vidApply').addEventListener('click', function () {
+    if (!vidCur || !vidCaps) return toast('carregue o perfil primeiro');
+    var cur = vidCur.xml;
+    var caps = vidCaps.xml;
+    var ws = optList(caps, 'videoResolutionWidth');
+    var hs = optList(caps, 'videoResolutionHeight');
+    var resIdx = parseInt($('edRes').value, 10);
+    var edits = {
+      videoResolutionWidth: ws[resIdx],
+      videoResolutionHeight: hs[resIdx],
+      maxFrameRate: $('edFps').value,
+      VideoQualityControlType: $('edQmode').value,
+      fixedQuality: $('edFq').value,
+      constantBitRate: $('edCbr').value,
+      GovLength: $('edGov').value
+    };
+    var sm = $('edSmart');
+    if (sm) edits.vencSmart = sm.value;
+    camPut('YG/videoSetting/' + vidProfile, edits)
+      .then(function (j) {
+        toast(j.ok ? 'perfil ' + vidProfile + ' aplicado ✓ (stream RTSP muda agora)' : 'falhou: ' + j.statusString);
+      });
+  });
+
+  /* ------ OSD ------ */
+  function loadOSD() {
+    camGet('YG/OSD/OSDConfig/0').then(function (j) {
+      if (!j.ok) return;
+      var xml = j.xml;
+      $('osdName').value = xmlText_(xml, 'OSDChannelName');
+      $('osdNameShow').checked = boolOf(xmlText_(xml, 'OSDDispName'));
+      $('osdDateShow').checked = boolOf(xmlText_(xml, 'OSDDispDate'));
+      $('osdBitShow').checked = boolOf(xmlText_(xml, 'OSDDispBitrate'));
+      $('osdFontSize').value = xmlText_(xml, 'OSDFontSize') || '32';
+    });
+  }
+  $('osdApply').addEventListener('click', function () {
+    camPut('YG/OSD/OSDConfig/0', {
+      OSDChannelName: $('osdName').value,
+      OSDDispName: String($('osdNameShow').checked),
+      OSDDispDate: String($('osdDateShow').checked),
+      OSDDispBitrate: String($('osdBitShow').checked),
+      OSDFontSize: $('osdFontSize').value
+    }).then(function (j) {
+      toast(j.ok ? 'OSD aplicado ✓' : 'falhou: ' + j.statusString);
+    });
+  });
+
+  /* ------ audio ------ */
+  function loadAudio() {
+    camGet('YG/audioSetting').then(function (j) {
+      if (!j.ok) return;
+      var xml = j.xml;
+      $('audVol').value = xmlText_(xml, 'AudioInVolume');
+      $('audVolVal').textContent = $('audVol').value;
+      $('audMute').checked = boolOf(xmlText_(xml, 'AudioInMute'));
+    });
+  }
+  $('audVol').addEventListener('input', function () { $('audVolVal').textContent = this.value; });
+  $('audApply').addEventListener('click', function () {
+    camPut('YG/audioSetting', {
+      AudioInVolume: $('audVol').value,
+      AudioInMute: String($('audMute').checked)
+    }).then(function (j) {
+      toast(j.ok ? 'áudio aplicado ✓' : 'falhou: ' + j.statusString);
+    });
+  });
+
+  /* ------ motion ------ */
+  var mdCur = null;
+  function loadMotion() {
+    camGet('YG/event/motionDetection').then(function (j) {
+      mdCur = j;
+      if (!j.ok) return;
+      var xml = j.xml;
+      var type = xmlText_(xml, 'MotionType');
+      var sel = $('mdType');
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === type) { sel.selectedIndex = i; break; }
+      }
+      $('mdSens').value = xmlText_(xml, 'sensitivityLevel');
+      $('mdSensVal').textContent = $('mdSens').value;
+      $('mdMail').checked = boolOf(xmlText_(xml, 'isSendMail'));
+      $('mdBuzz').checked = boolOf(xmlText_(xml, 'isBuzz'));
+      var rotation = xmlText_(xml, 'rotate');
+      if (mdCur.cellCount) {
+        var cell = xmlText_(xml, 'mdCell');
+        var fullOn = cell.indexOf('0') < 0;
+        var fullOff = cell.indexOf('1') < 0;
+        if (fullOn || fullOff) $('mdFull').checked = fullOn;
+        else $('mdFull').checked = false;
+      }
+    });
+  }
+  $('mdSens').addEventListener('input', function () { $('mdSensVal').textContent = this.value; });
+  $('mdApply').addEventListener('click', function () {
+    if (!mdCur || !mdCur.ok) return toast('carregue a detecção primeiro');
+    var edits = {
+      MotionType: $('mdType').value,
+      sensitivityLevel: $('mdSens').value,
+      isSendMail: String($('mdMail').checked),
+      isBuzz: String($('mdBuzz').checked)
+    };
+    var mdCells = $('mdFull').checked ? '1' : '0';
+    var hasCells = !!mdCur.list && mdCur.list.cellCount;
+    var body = { path: 'YG/event/motionDetection', edits: edits };
+    if (hasCells) body.mdCellAll = mdCells;
+    api('/api/cam', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (j) {
+        if (j.ok) { $('mdFull').dataset.wasAll = mdCells; toast('movimento aplicado ✓'); }
+        else toast('falhou: ' + j.statusString);
+      });
+  });
+
+  /* ------ seguraca ------ */
+  var users = [];
+  function loadSecurity() {
+    camGet('Security/AAA/users').then(function (j) {
+      users = (j && j.list) || [];
+      var ul = $('userList');
+      ul.innerHTML = '';
+      if (!users.length) {
+        ul.innerHTML = '<span style="color:var(--dim);font-size:13px">não listou usuários</span>';
+        return;
+      }
+      users.forEach(function (u, i) {
+        var row = document.createElement('div');
+        row.className = 'row';
+        var left = '<span class="k">' + u.userName + ' <span style="font-size:11px">(' + u.userType + ')</span></span>';
+        var right = '<span class="v" style="display:flex;align-items:center;gap:6px"><span id="upass' + i + '" style="filter:blur(5px);cursor:pointer" onclick="this.style.filter=\'none\'">' + u.password + '</span></span>';
+        row.innerHTML = left + right;
+        ul.appendChild(row);
+      });
+    });
+    /* switches de auth */
+    Promise.all([camGet('YG/authentication/rtsp'), camGet('YG/authentication/onvif')]).then(function (arr) {
+      $('secRtsp').checked = boolOf(xmlText_(arr[0].xml || '', 'enabled'));
+      $('secOnvif').checked = boolOf(xmlText_(arr[1].xml || '', 'enabled'));
+    });
+  }
+
+  $('secRtsp').addEventListener('change', function () {
+    var want = this.checked;
+    if (!confirm('Exigir autenticação no RTSP: ' + want + '?')) { this.checked = !want; return; }
+    camPut('YG/authentication/rtsp', { enabled: String(want) })
+      .then(function (j) { toast(j.ok ? 'RTSP auth: ' + want : 'falhou: ' + j.statusString); });
+  });
+  $('secOnvif').addEventListener('change', function () {
+    var want = this.checked;
+    if (!confirm('Exigir autenticação no ONVIF: ' + want + '?')) { this.checked = !want; return; }
+    camPut('YG/authentication/onvif', { enabled: String(want) })
+      .then(function (j) { toast(j.ok ? 'ONVIF auth: ' + want : 'falhou: ' + j.statusString); });
+  });
+
+  $('passApply').addEventListener('click', function () {
+    if (!users.length) return toast('não há usuário listado');
+    var name = prompt('Usuário (é ' + users.map(function (u) { return u.userName; }).join(', ') + '):', users[0].userName);
+    if (!name) return;
+    var user = users.filter(function (u) { return u.userName === name; })[0];
+    if (!user) return toast('usuário não listado');
+    var p1 = $('newPass').value;
+    var p2 = $('newPass2').value;
+    if (!p1) return toast('digite a senha');
+    if (p1 !== p2) return toast('senhas não batem');
+    var msg = user.userName === 'admin'
+      ? 'Trocar senha do ADMIN? O acesso da câmera usará a nova senha pra RTSP também (config.json atualizado no servidor).'
+      : 'Trocar senha de ' + user.userName + '?';
+    if (!confirm(msg)) return;
+    api('/api/user/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: user.id, userName: user.userName, password: p1, userType: user.userType }) })
+      .then(function (j) {
+        if (j.ok) {
+          toast('senha trocada ✓');
+          loadSecurity();
+          if (j.mustUpdateConfig) toast('senha admin trocada ✓ — RTSP foi atualizado no servidor');
+        } else toast('falhou: ' + j.statusString);
+      })
+      .catch(function () { toast('falhou'); });
+  });
+
+  /* ------ ações ------ */
+  $('btnReboot').addEventListener('click', function () {
+    if (!confirm('A câmera fica sem sinal ~1 min. Reiniciar?')) return;
+    if (!confirm('Tem certeza?')) return;
+    api('/api/reboot', { method: 'POST' }).then(function (j) {
+      toast(j.ok ? 'reiniciando…' : 'falhou (' + j.status + ')');
+      setTimeout(connect, 20000);
+    });
   });
 
   /* ================================================================ fotos */
@@ -735,69 +1188,7 @@
       });
   }
 
-  /* ================================================================ sistema */
-  function loadSystem() {
-    var row = function (k, v) {
-      return '<div class="row"><span class="k">' + k + '</span><span class="v">' + (v == null ? '--' : v) + '</span></div>';
-    };
-    api('/api/device').then(function (d) {
-      var g = $('deviceGrid');
-      var ports = $('portRows');
-      var warns = $('sysWarns');
-      g.innerHTML = '';
-      ports.innerHTML = '';
-      warns.innerHTML = '';
-      if (d.device) {
-        ['deviceName|Nome', 'model|Modelo', 'serialNumber|Serial', 'macAddress|MAC', 'firmwareVersion|Firmware', 'bootVersion|Boot']
-          .forEach(function (pair) {
-            var kv = pair.split('|');
-            g.insertAdjacentHTML('beforeend',
-              '<div style="padding:6px 0"><div style="font-size:11px;color:var(--dim)">' + kv[1] + '</div><div style="font-size:13px;word-break:break-all">' + (d.device[kv[0]] || '--') + '</div></div>');
-          });
-      } else {
-        g.innerHTML = '<span style="color:var(--dim);font-size:13px">câmera não responde ao PSIA agora</span>';
-      }
-      if (d.ports && d.ports.length) {
-        d.ports.forEach(function (p) {
-          ports.insertAdjacentHTML('beforeend', row(p.proto, p.port));
-        });
-      }
-      /* avisos de seguranca */
-      var telnet = d.telnetOpen === true;
-      if (telnet) {
-        warns.insertAdjacentHTML('beforeend',
-          '<div class="warnbox"><b>⚠ Telnet (porta 23) aberto.</b><br> Vulnerabilidade comum nesse firmware — qualquer pessoa na rede pode tentar login no sistema Linux da câmera.</div>');
-      }
-      warns.insertAdjacentHTML('beforeend',
-        '<div class="warnbox"><b>⚠ /PSIA/Security/AAA/users responde sem senha</b> e traz <b>usuário e senha em texto puro</b>. Troque a senha do admin no painel de fábrica.</div>');
-      if (d.faceDetection && d.faceDetection.enabled === 'true') {
-        warns.insertAdjacentHTML('beforeend',
-          '<div class="warnbox">ℹ Detecção de rosto no firmware: <b>habilitada</b>. Não há API de eventos de movimento — apps de IA teriam que rodar em outro lugar.</div>');
-      }
-      $('sysRows').innerHTML = row('Detecção de rosto', d.faceDetection ? (d.faceDetection.enabled === 'true' ? 'ligada' : 'desligada') : '--') +
-        row('Câmera HTTP', d.httpBase) +
-        row('Painel de fábrica', '<a style="color:var(--accent)" href="' + d.adminUiUrl + '" target="_blank" rel="noopener">abrir ↗</a>') +
-        row('Perfis RTSP', 'profile0 · profile1 · profile2');
-    });
-
-    api('/api/status').then(function (s) {
-      $('appUptime').textContent = Math.floor(s.uptime / 60) + ' min';
-    });
-  }
-
-  $('btnAdminUi').addEventListener('click', function () {
-    window.open('http://' + location.hostname + '/doc/page/login.html', '_blank');
-  });
-  $('btnReboot').addEventListener('click', function () {
-    if (!confirm('A câmera vai ficar sem sinal ~1 min. Reiniciar?')) return;
-    if (!confirm('Tem certeza?')) return;
-    api('/api/reboot', { method: 'POST' }).then(function (j) {
-      toast(j.ok ? 'reiniciando…' : 'falhou (' + j.status + ')');
-      setTimeout(connect, 15000);
-    });
-  });
-
-  /* ================================================================ start */
+  /* ================================================================ arranque */
   paintRec();
   connect();
 })();
