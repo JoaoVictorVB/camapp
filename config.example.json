@@ -1,0 +1,8 @@
+{
+  "port": 8080,
+  "rtsp": "rtsp://USUARIO:SENHA@IP-DA-CAMERA:8554/profile0",
+  "ffmpeg": "bin/ffmpeg.exe",
+  "cameraName": "Câmera da Sala",
+  "streamFps": 12,
+  "recordCopy": true
+}

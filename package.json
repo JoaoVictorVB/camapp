@@ -1,0 +1,22 @@
+{
+  "name": "camapp",
+  "version": "1.0.0",
+  "description": "App web proprio (PWA) para cameras IP RTSP locais: ao vivo, foto e gravacao. Zero dependencias.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "rtsp",
+    "ip-camera",
+    "mjpeg",
+    "ffmpeg",
+    "pwa",
+    "self-hosted"
+  ],
+  "license": "MIT",
+  "private": true
+}

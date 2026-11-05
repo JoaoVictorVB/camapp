@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Câmera">
+<meta name="theme-color" content="#0b0f14">
+<link rel="manifest" href="/manifest.webmanifest">
+<title>Câmera</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: #0b0f14; color: #e8eef6;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    height: 100%; display: flex; flex-direction: column;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; background: #0e141c;
+    border-bottom: 1px solid #1b2532; flex: 0 0 auto;
+  }
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #e5484d;
+    box-shadow: 0 0 10px #e5484d88; flex: 0 0 auto;
+  }
+  .dot.on { background: #2ee6a8; box-shadow: 0 0 10px #2ee6a888; }
+  .dot.wait { background: #f5a524; box-shadow: 0 0 10px #f5a52488; }
+  .title { font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+  .spacer { flex: 1; }
+  .clock { font-variant-numeric: tabular-nums; font-size: 15px; color: #9fb0c3; }
+
+  #stage { position: relative; flex: 1 1 auto; min-height: 0; background: #000; }
+  #video {
+    width: 100%; height: 100%; object-fit: contain; display: block;
+    background: #000;
+  }
+  #overlay {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; color: #6f8299; font-size: 14px;
+    pointer-events: none; text-align: center; padding: 20px;
+  }
+  #overlay.hide { display: none; }
+  .spin {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 3px solid #22303f; border-top-color: #2ee6a8;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer {
+    flex: 0 0 auto; background: #0e141c; border-top: 1px solid #1b2532;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+  .buttons { display: flex; gap: 8px; }
+  button {
+    flex: 1; appearance: none; border: 1px solid #22303f; background: #141d28;
+    color: #dbe6f2; border-radius: 12px; padding: 12px 6px;
+    font-size: 13px; font-weight: 600; font-family: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    min-height: 56px; justify-content: center;
+  }
+  button:active { background: #1b2734; transform: scale(.98); }
+  button .ico { font-size: 18px; line-height: 1; }
+  button.on { border-color: #e5484d; color: #ff8b8f; background: #2a1417; }
+  button.rec { border-color: #e5484d; }
+
+  #recListWrap {
+    max-height: 0; overflow: hidden; transition: max-height .25s ease;
+    border-top: 1px solid transparent;
+  }
+  #recListWrap.open { max-height: 42vh; overflow-y: auto; border-top-color: #1b2532; margin-top: 10px; }
+  #recList { list-style: none; margin: 0; padding: 0; }
+  #recList li { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid #16202b; }
+  #recList a { color: #4fd1ff; text-decoration: none; font-size: 13px; flex: 1; }
+  #recList .meta { font-size: 11px; color: #6f8299; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px);
+    background: #1b2734; color: #dbe6f2; padding: 10px 16px; border-radius: 20px;
+    font-size: 13px; opacity: 0; transition: all .25s ease; pointer-events: none;
+    border: 1px solid #2b3a4c; max-width: 86vw; text-align: center;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  body.fs header, body.fs footer { display: none; }
+  body.fs #stage { position: fixed; inset: 0; }
+  #fsHint {
+    position: fixed; top: 12px; left: 12px; font-size: 11px; color: #55677c;
+    opacity: 0; transition: opacity .4s;
+  }
+  body.fs.touch #fsHint { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="dot wait" id="dot"></span>
+    <span class="title" id="camName">Câmera</span>
+    <span class="spacer"></span>
+    <span class="clock" id="clock">--:--</span>
+  </header>
+
+  <div id="stage">
+    <img id="video" alt="">
+    <div id="overlay" class="hide">
+      <div class="spin"></div>
+      <div id="overlayText">conectando na câmera…</div>
+    </div>
+    <div id="fsHint">toque para sair da tela cheia</div>
+  </div>
+
+  <footer>
+    <div class="buttons">
+      <button id="btnPhoto"><span class="ico">📸</span>Foto</button>
+      <button id="btnRec" class="rec"><span class="ico">⏺</span>Gravar</button>
+      <button id="btnFs"><span class="ico">⛶</span>Tela cheia</button>
+      <button id="btnList"><span class="ico">🎞</span>Vídeos</button>
+    </div>
+    <div id="recListWrap">
+      <ul id="recList"></ul>
+    </div>
+  </footer>
+</div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var video = document.getElementById('video');
+  var dot = document.getElementById('dot');
+  var overlay = document.getElementById('overlay');
+  var overlayText = document.getElementById('overlayText');
+  var toastEl = document.getElementById('toast');
+  var btnRec = document.getElementById('btnRec');
+  var btnList = document.getElementById('btnList');
+  var recListWrap = document.getElementById('recListWrap');
+  var recList = document.getElementById('recList');
+
+  var reconnectTimer = null;
+  var attempt = 0;
+  var recording = false;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+  }
+
+  function setState(state, msg) {
+    dot.className = 'dot ' + (state === 'on' ? 'on' : state === 'wait' ? 'wait' : '');
+    if (state === 'on') {
+      overlay.classList.add('hide');
+    } else {
+      overlay.classList.remove('hide');
+      overlayText.textContent = msg || 'conectando na câmera…';
+    }
+  }
+
+  function connect() {
+    clearTimeout(reconnectTimer);
+    attempt++;
+    setState('wait', attempt === 1 ? 'conectando na câmera…' : 'reconectando…');
+    // MJPEG: o <img> fica carregando pra sempre enquanto o stream vive.
+    video.src = '/stream.mjpg?t=' + Date.now();
+  }
+
+  function scheduleReconnect() {
+    clearTimeout(reconnectTimer);
+    var delay = Math.min(8000, 800 * attempt);
+    reconnectTimer = setTimeout(connect, delay);
+  }
+
+  video.addEventListener('load', function () {
+    if (video.naturalWidth > 0) {
+      attempt = 0;
+      setState('on');
+    }
+  });
+  video.addEventListener('error', function () {
+    setState('off', 'sem sinal da câmera');
+    scheduleReconnect();
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      // iOS mata o stream quando a tela apaga / troca de app
+      if (!video.naturalWidth || video.complete) connect();
+    }
+  });
+
+  /* ---------------------------------------------------------- relogio */
+  function tick() {
+    var d = new Date();
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    document.getElementById('clock').textContent =
+      p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    setTimeout(tick, 1000 - (d.getMilliseconds()));
+  }
+  tick();
+
+  /* ----------------------------------------------------------- status */
+  function poll() {
+    fetch('/api/status', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (s) {
+        document.getElementById('camName').textContent = s.camera || 'Câmera';
+        if (!s.online) setState('off', 'câmera offline na rede');
+        if (s.recording !== recording) {
+          recording = !!s.recording;
+          paintRec();
+        }
+      })
+      .catch(function () { })
+      .then(function () { setTimeout(poll, 8000); });
+  }
+  poll();
+
+  /* ---------------------------------------------------------- gravacao */
+  function paintRec() {
+    btnRec.classList.toggle('on', recording);
+    btnRec.querySelector('.ico').textContent = recording ? '⏹' : '⏺';
+    btnRec.lastChild.textContent = recording ? 'Parar' : 'Gravar';
+  }
+
+  btnRec.addEventListener('click', function () {
+    var action = recording ? 'stop' : 'start';
+    btnRec.disabled = true;
+    fetch('/api/record/' + action, { method: 'POST' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        recording = (action === 'start');
+        paintRec();
+        toast(recording ? 'Gravando…' : 'Gravação salva');
+        if (!recording) loadList();
+      })
+      .catch(function () { toast('falhou ao gravar'); })
+      .then(function () { btnRec.disabled = false; });
+  });
+
+  /* ------------------------------------------------------------- foto */
+  document.getElementById('btnPhoto').addEventListener('click', function () {
+    toast('capturando…');
+    var win = window.open('/snap.jpg?download=1', '_blank');
+    if (!win) {
+      // iOS bloqueia popup: baixa via link temporario
+      var a = document.createElement('a');
+      a.href = '/snap.jpg?download=1';
+      a.target = '_blank';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+  });
+
+  /* -------------------------------------------------------- tela cheia */
+  var btnFs = document.getElementById('btnFs');
+  function toggleFs() {
+    var on = document.body.classList.toggle('fs');
+    btnFs.querySelector('.ico').textContent = on ? '⤡' : '⛶';
+    if (on) {
+      document.body.classList.add('touch');
+      clearTimeout(toggleFs._t);
+      toggleFs._t = setTimeout(function () { document.body.classList.remove('touch'); }, 2000);
+    }
+  }
+  btnFs.addEventListener('click', toggleFs);
+  document.getElementById('stage').addEventListener('click', function () {
+    if (document.body.classList.contains('fs')) toggleFs();
+  });
+
+  /* ----------------------------------------------------------- videos */
+  function fmtSize(b) {
+    if (b > 1048576) return (b / 1048576).toFixed(1) + ' MB';
+    if (b > 1024) return (b / 1024).toFixed(0) + ' KB';
+    return b + ' B';
+  }
+
+  function loadList() {
+    fetch('/api/recordings', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (items) {
+        recList.innerHTML = '';
+        if (!items.length) {
+          var li = document.createElement('li');
+          li.innerHTML = '<span class="meta">nenhuma gravação ainda</span>';
+          recList.appendChild(li);
+          return;
+        }
+        items.forEach(function (it) {
+          var li = document.createElement('li');
+          var d = new Date(it.mtime);
+          var a = document.createElement('a');
+          a.href = '/recordings/' + encodeURIComponent(it.file);
+          a.target = '_blank';
+          a.textContent = d.toLocaleString('pt-BR');
+          var meta = document.createElement('span');
+          meta.className = 'meta';
+          meta.textContent = fmtSize(it.size);
+          li.appendChild(a); li.appendChild(meta);
+          recList.appendChild(li);
+        });
+      })
+      .catch(function () { });
+  }
+
+  btnList.addEventListener('click', function () {
+    var open = recListWrap.classList.toggle('open');
+    if (open) loadList();
+  });
+
+  /* ------------------------------------------------------------- start */
+  paintRec();
+  connect();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# segredos e binarios
+config.json
+bin/
+node_modules/
+
+# saidas
+recordings/
+*.ts
+*.mp4
+
+# sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
