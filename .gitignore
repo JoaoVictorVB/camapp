@@ -9,6 +9,9 @@ photos/
 *.ts
 *.mp4
 
+# ferramentas
+.opencode/
+
 # sistema
 .DS_Store
 Thumbs.db

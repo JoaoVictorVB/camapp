@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -31,15 +31,15 @@
     padding: 10px 12px; background: var(--panel2);
     border-bottom: 1px solid var(--border); flex: 0 0 auto; min-height: 44px;
   }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: #e5484d; box-shadow: 0 0 8px #e5484d88; flex: 0 0 auto; }
-  .dot.on { background: var(--accent); box-shadow: 0 0 8px #2ee6a888; }
-  .dot.wait { background: #f5a524; box-shadow: 0 0 8px #f5a52488; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #e5484d; flex: 0 0 auto; border: 1px solid #0b0f14; }
+  .dot.on { background: var(--accent); }
+  .dot.wait { background: #f5a524; }
   .title { font-size: 15px; font-weight: 700; letter-spacing: .2px; white-space: nowrap; }
   .spacer { flex: 1; }
   .chip {
-    font-size: 11px; padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+    font-size: 12px; padding: 3px 10px; border-radius: 20px; white-space: nowrap;
     background: #16202b; color: var(--dim); border: 1px solid var(--border);
-    font-variant-numeric: tabular-nums;
+    font-variant-numeric: tabular-nums; line-height: 1.4;
   }
   .chip.acc { color: var(--accent); border-color: #25463c; }
   .chip.warn { color: #ffb0b4; border-color: #55303a; }
@@ -62,7 +62,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .bar { flex: 0 0 auto; padding: 8px 8px; display: flex; gap: 6px; background: var(--panel2); border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
+  .bar { flex: 0 0 auto; padding: 10px; display: flex; gap: 6px; background: var(--panel2); border-top: 1px solid var(--border); align-items: center; flex-wrap: wrap; }
   .buttons { display: flex; gap: 6px; flex: 1; }
   .buttons .btn { flex: 1; }
 
@@ -74,7 +74,8 @@
     min-height: 44px; justify-content: center; cursor: pointer; user-select: none;
   }
   button:active { background: #1b2734; transform: scale(.97); }
-  button .ico { font-size: 17px; line-height: 1; }
+  button .ico { line-height: 1; }
+  button .ico svg { width: 20px; height: 20px; display: block; }
   button:disabled { opacity: .45; }
   button.on { border-color: var(--warn); color: #ff8b8f; background: #2a1417; }
   button.acc { border-color: #25463c; color: var(--accent); }
@@ -86,7 +87,7 @@
 
   body.fs header, body.fs .bar, body.fs nav { display: none; }
   body.fs #stage { position: fixed; inset: 0; z-index: 30; }
-  #fsHint { position: fixed; top: 12px; left: 12px; font-size: 11px; color: #55677c; opacity: 0; transition: opacity .4s; z-index: 40; pointer-events: none; }
+  #fsHint { position: fixed; top: 12px; left: 12px; font-size: 12px; color: #6b8096; opacity: 0; transition: opacity .4s; z-index: 40; pointer-events: none; }
   body.fs.touch #fsHint { opacity: 1; }
 
   .scroll { overflow-y: auto; padding: 12px; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; }
@@ -139,7 +140,8 @@
   /* ptz */
   .ptzgrid { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 52px); gap: 6px; justify-content: center; }
   .ptzgrid button { padding: 0; min-height: 0; }
-  .ptzgrid .ph { display: flex; align-items: center; justify-content: center; color: var(--dim); font-size: 20px; }
+  .ptzgrid .ph { display: flex; align-items: center; justify-content: center; color: var(--dim); }
+  .ptzgrid .ph svg { width: 26px; height: 26px; }
   .padrow { display: flex; gap: 8px; margin-top: 10px; }
   .padrow .grp { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; }
   .padrow .grp .h { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 8px; font-weight: 700; }
@@ -175,9 +177,9 @@
   }
   nav button {
     flex: 1; border: 0; border-radius: 0; background: transparent; color: var(--dim);
-    min-height: 52px; font-size: 10px; gap: 3px; justify-content: center;
+    min-height: 52px; font-size: 12px; gap: 3px; justify-content: center;
   }
-  nav button .ico { font-size: 20px; }
+  nav button .ico svg { width: 22px; height: 22px; }
   nav button.sel { color: var(--accent); }
 
   #toast {
@@ -190,6 +192,18 @@
 </style>
 </head>
 <body>
+<svg style="display:none" aria-hidden="true" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <g id="i-tv"><rect x="3" y="4.5" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 21h6M12 17.5V21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></g>
+    <g id="i-pad"><circle cx="12" cy="16" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 12V6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="5" r="2" fill="currentColor"/></g>
+    <g id="i-sliders" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="17" r="2" fill="currentColor" stroke="none"/></g>
+    <g id="i-cam"><rect x="3" y="6.5" width="18" height="12.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 6.5l1.4-2.3h4.2l1.4 2.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></g>
+    <g id="i-rec"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="currentColor"/></g>
+    <g id="i-stop"><rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor"/></g>
+    <g id="i-fs" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5.5A1.5 1.5 0 015.5 4H9M15 4h3.5A1.5 1.5 0 0120 5.5V9M20 15v3.5a1.5 1.5 0 01-1.5 1.5H15M9 20H5.5A1.5 1.5 0 014 18.5V15"/></g>
+    <g id="i-film"><rect x="3.5" y="6" width="17" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 6v12M16 6v12M3.5 10h4.5M16 10h4.5M3.5 14h4.5M16 14h4.5" fill="none" stroke="currentColor" stroke-width="1.4"/></g>
+  </defs>
+</svg>
 <div id="app">
 
   <header>
@@ -206,7 +220,7 @@
     <section class="view active" id="view-live">
       <div class="presets" id="presets"></div>
       <div id="stage">
-        <img id="video" alt="">
+        <img id="video" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
         <div id="overlay" class="hide">
           <div class="spin"></div>
           <div id="overlayText">conectando na câmera…</div>
@@ -215,9 +229,9 @@
       </div>
       <div class="bar">
         <div class="buttons">
-          <button id="btnPhoto"><span class="ico">📸</span>Foto</button>
-          <button id="btnRec" class="acc"><span class="ico">⏺</span>Gravar</button>
-          <button id="btnFs"><span class="ico">⛶</span>Tela</button>
+          <button id="btnPhoto"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-cam" xlink:href="#i-cam"/></svg></span>Foto</button>
+          <button id="btnRec" class="acc"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-rec" xlink:href="#i-rec" id="recUse"/></svg></span>Gravar</button>
+          <button id="btnFs"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-fs" xlink:href="#i-fs"/></svg></span>Tela</button>
         </div>
       </div>
     </section>
@@ -226,14 +240,14 @@
     <section class="view" id="view-ptz">
       <div class="scroll">
         <div id="ptzPreviewWrap">
-          <img id="ptzPreview" alt="">
+          <img id="ptzPreview" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
         </div>
 
         <div class="card">
           <h3>Pan & Tilt</h3>
           <div class="ptzgrid">
             <button data-pan="-1" data-tilt="1">↖</button><button data-pan="0" data-tilt="1">↑</button><button data-pan="1" data-tilt="1">↗</button>
-            <button data-pan="-1" data-tilt="0">←</button><div class="ph">🕹</div><button data-pan="1" data-tilt="0">→</button>
+            <button data-pan="-1" data-tilt="0">←</button><div class="ph"><svg viewBox="0 0 24 24"><use href="#i-pad" xlink:href="#i-pad"/></svg></div><button data-pan="1" data-tilt="0">→</button>
             <button data-pan="-1" data-tilt="-1">↙</button><button data-pan="0" data-tilt="-1">↓</button><button data-pan="1" data-tilt="-1">↘</button>
           </div>
           <div style="margin-top:10px">
@@ -279,12 +293,12 @@
             <button id="presetGo" class="acc" style="min-height:0;padding:8px 12px">Ir</button>
           </div>
           <div style="display:flex;gap:6px">
-            <button id="presetSave" style="flex:1;min-height:0;padding:8px">💾 Salvar posição</button>
-            <button id="presetDel" class="danger" style="flex:1;min-height:0;padding:8px">🗑 Remover</button>
+            <button id="presetSave" style="flex:1;min-height:0;padding:8px">Salvar posição</button>
+            <button id="presetDel" class="danger" style="flex:1;min-height:0;padding:8px">Remover</button>
           </div>
         </div>
 
-        <div class="bar" style="border:0;padding:6px 8px 2px">
+        <div class="bar" style="border:0;padding:8px 12px 12px">
           <label class="switch"><input type="checkbox" id="miniPrevChk"><span class="tg"></span></label>
           <span style="font-size:12px;color:var(--dim)">mini preview enquanto controla</span>
         </div>
@@ -311,7 +325,7 @@
             <input type="text" id="ntpHost" placeholder="a.ntp.br">
           </div>
           <div style="display:flex;gap:6px">
-            <button id="btnSyncClock" class="acc" style="flex:1;min-height:0;padding:9px">🕒 Sincronizar agora</button>
+            <button id="btnSyncClock" class="acc" style="flex:1;min-height:0;padding:9px">Sincronizar agora</button>
             <button id="btnNtpSave" style="flex:1;min-height:0;padding:9px">Aplicar NTP</button>
           </div>
         </div>
@@ -320,7 +334,7 @@
           <h3>Perfil de vídeo</h3>
           <div class="presets" style="padding:0 0 10px" id="vidProfiles"></div>
           <div id="vidEditor"></div>
-          <div class="warnbox" id="vidWarn" style="margin-top:10px">⚠ Mudar <b>perfil principal</b> muda a resolução do RTSP e afeta gravação e o stream deste app.</div>
+          <div class="warnbox" id="vidWarn" style="margin-top:10px">Atenção: mudar <b>perfil principal</b> muda a resolução do RTSP e afeta gravação e o stream deste app.</div>
           <button id="vidApply" class="acc" style="width:100%">Aplicar no perfil selecionado</button>
         </div>
 
@@ -383,14 +397,14 @@
             <label>Confirmar senha</label>
             <input type="password" id="newPass2">
           </div>
-          <button id="passApply" class="danger" style="width:100%">🔑 Trocar senha do usuário selecionado</button>
+          <button id="passApply" class="danger" style="width:100%">Trocar senha do usuário selecionado</button>
           <div class="warnbox" style="margin-top:10px">Trocar a senha do <b>admin</b> atualiza o RTSP do seu config.json automaticamente. Streaming antigo morre até reconectar.</div>
         </div>
 
         <div class="card">
           <h3>Ações</h3>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button id="btnReboot" class="danger">♻ Reiniciar câmera</button>
+            <button id="btnReboot" class="danger">Reiniciar câmera</button>
           </div>
           <div class="row" style="margin-top:8px"><span class="k">Painel de fábrica</span><span class="v"><a style="color:var(--accent)" id="adminUiLink" href="#" target="_blank" rel="noopener">abrir ↗</a></span></div>
         </div>
@@ -401,7 +415,7 @@
     <section class="view" id="view-photos">
       <div class="scroll">
         <div class="card" style="display:flex;gap:8px;align-items:center">
-          <button id="photoShot" class="acc" style="flex:1"><span class="ico">📸</span> Capturar e salvar</button>
+          <button id="photoShot" class="acc" style="flex:1"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-cam" xlink:href="#i-cam"/></svg></span> Capturar e salvar</button>
         </div>
         <div class="photos-grid" id="photosGrid"></div>
         <div id="photosEmpty" class="empty" style="display:none">nenhuma foto salva ainda</div>
@@ -419,11 +433,11 @@
   </main>
 
   <nav>
-    <button data-view="live" class="sel"><span class="ico">📺</span>Ao vivo</button>
-    <button data-view="ptz"><span class="ico">🕹</span>Controle</button>
-    <button data-view="panel"><span class="ico">⚙️</span>Painel</button>
-    <button data-view="photos"><span class="ico">📸</span>Fotos</button>
-    <button data-view="videos"><span class="ico">🎬</span>Vídeos</button>
+    <button data-view="live" class="sel"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-tv" xlink:href="#i-tv"/></svg></span>Ao vivo</button>
+    <button data-view="ptz"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-pad" xlink:href="#i-pad"/></svg></span>Controle</button>
+    <button data-view="panel"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-sliders" xlink:href="#i-sliders"/></svg></span>Painel</button>
+    <button data-view="photos"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-cam" xlink:href="#i-cam"/></svg></span>Fotos</button>
+    <button data-view="videos"><span class="ico"><svg viewBox="0 0 24 24"><use href="#i-film" xlink:href="#i-film"/></svg></span>Vídeos</button>
   </nav>
 </div>
 <div id="toast"></div>
@@ -554,7 +568,8 @@
   function paintRec() {
     var b = $('btnRec');
     b.classList.toggle('on', recording);
-    b.querySelector('.ico').textContent = recording ? '⏹' : '⏺';
+    $('#recUse').setAttribute('href', recording ? '#i-stop' : '#i-rec');
+    $('#recUse').setAttributeNS('http://www.w3.org/1999/xlink', 'href', recording ? '#i-stop' : '#i-rec');
     b.childNodes[1].textContent = recording ? 'Parar' : 'Gravar';
   }
   $('btnRec').addEventListener('click', function () {
@@ -587,9 +602,8 @@
   }
 
   function toggleFs() {
-    var on = document.body.classList.toggle('fs');
-    $('btnFs').querySelector('.ico').textContent = on ? '⤡' : '⛶';
-    if (on) {
+    document.body.classList.toggle('fs');
+    if (document.body.classList.contains('fs')) {
       document.body.classList.add('touch');
       clearTimeout(toggleFs._t);
       toggleFs._t = setTimeout(function () { document.body.classList.remove('touch'); }, 2200);
@@ -716,7 +730,7 @@
     var w = $('ptzPreviewWrap');
     w.classList.add('open');
     var img = $('ptzPreview');
-    if (!img.getAttribute('src')) {
+    if (img.getAttribute('src').indexOf('data:image') === 0) {
       var tick = function () {
         if (!w.classList.contains('open') || currentView !== 'ptz') return;
         img.src = '/snap.jpg?_=' + Date.now();
@@ -728,7 +742,7 @@
   function ptzPreviewOff() {
     $('ptzPreviewWrap').classList.remove('open');
     var img = $('ptzPreview');
-    img.removeAttribute('src');
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
   }
   $('miniPrevChk').addEventListener('change', function () {
     if (this.checked) ptzPreviewOn(); else ptzPreviewOff();
@@ -768,11 +782,11 @@
     /* alerts de seguranca */
     var warns = [];
     if (d.telnetOpen === true) {
-      warns.push('<div class="warnbox"><b>⚠ Telnet (porta 23) aberto.</b><br> Qualquer dispositivo na rede pode tentar login no sistema Linux da câmera.</div>');
+      warns.push('<div class="warnbox"><b>Telnet (porta 23) aberto.</b><br> Qualquer dispositivo na rede pode tentar login no sistema Linux da câmera.</div>');
     }
-    warns.push('<div class="warnbox"><b>⚠ /PSIA/Security/AAA/users responde sem senha</b> e traz <b>usuário e senha em texto puro</b>. Troque a senha abaixo e, além disso, bloqueie a câmera no roteador.</div>');
+    warns.push('<div class="warnbox"><b>/PSIA/Security/AAA/users responde sem senha</b> e traz <b>usuário e senha em texto puro</b>. Troque a senha abaixo e, além disso, bloqueie a câmera no roteador.</div>');
     if (d.faceDetection && d.faceDetection.enabled === 'true') {
-      warns.push('<div class="okbox">ℹ Detecção de rosto do firmware <b>habilitada</b> — não há API de eventos via HTTP, então não dá pra alertar por esse caminho.</div>');
+      warns.push('<div class="okbox">Detecção de rosto do firmware <b>habilitada</b> — não há API de eventos via HTTP, então não dá pra alertar por esse caminho.</div>');
     }
     panelState(null, warns.join(''));
     $('adminUiLink').href = d.adminUiUrl;
@@ -1177,7 +1191,7 @@
           meta.className = 'meta';
           meta.textContent = humanSize(it.size);
           var del = document.createElement('button');
-          del.className = 'mini'; del.textContent = '🗑';
+          del.className = 'mini'; del.textContent = 'apagar';
           del.addEventListener('click', function () {
             if (!confirm('Apagar ' + it.file + '?')) return;
             api('/api/recording/' + encodeURIComponent(it.file), { method: 'DELETE' }).then(loadRecordings);
