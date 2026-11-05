@@ -5,6 +5,7 @@ node_modules/
 
 # saidas
 recordings/
+photos/
 *.ts
 *.mp4
 
